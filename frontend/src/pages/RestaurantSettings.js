@@ -105,7 +105,7 @@ function RestaurantSettings({ profile, onUpdate }) {
                 ) : (
                   <label className="logo-upload-label">
                     <input type="file" accept="image/*" onChange={handleLogoChange} style={{ display: 'none' }} />
-                    <span className="logo-upload-icon">📷</span>
+                    <span className="logo-upload-icon">Upload</span>
                     <span>Click to upload logo (max 5MB)</span>
                   </label>
                 )}

@@ -184,7 +184,7 @@ function UserRegister() {
           <div className="install-text">Install App</div>
         </div>
         <div className="footer-center">
-          © 2025 Copyright, HotStop.com
+          (c) 2025 Copyright, HotStop.com
         </div>
         <div className="footer-right">
           About Us / Contact Us

@@ -212,7 +212,7 @@ function RestaurantRegister() {
                   ) : (
                     <label className="logo-upload-label">
                       <input type="file" accept="image/*" onChange={handleLogoChange} style={{ display: 'none' }} />
-                      <span className="logo-upload-icon">📷</span>
+                      <span className="logo-upload-icon">Upload</span>
                       <span>Click to upload logo (max 5MB)</span>
                     </label>
                   )}
@@ -299,7 +299,7 @@ function RestaurantRegister() {
           <div className="install-text">Install App</div>
         </div>
         <div className="footer-center">
-          © 2025 Copyright, HotStop.com
+          (c) 2025 Copyright, HotStop.com
         </div>
         <div className="footer-right">
           About Us / Contact Us

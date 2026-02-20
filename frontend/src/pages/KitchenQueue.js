@@ -36,7 +36,7 @@ function KitchenQueue() {
     return () => clearInterval(pollRef.current);
   }, [fetchOrders]);
 
-  // Elapsed time ticker — updates every second
+  // Elapsed time ticker - updates every second
   useEffect(() => {
     timerRef.current = setInterval(() => {
       setElapsedTimes(() => {
@@ -221,13 +221,13 @@ function KitchenQueue() {
                   autoFocus
                 />
                 <span className="kq-est-edit-label">min</span>
-                <button className="kq-est-save-btn" onClick={() => handleEstimatedTimeSave(order._id)}>✓</button>
-                <button className="kq-est-cancel-btn" onClick={() => setEditingTimeId(null)}>✕</button>
+                <button className="kq-est-save-btn" onClick={() => handleEstimatedTimeSave(order._id)}>Save</button>
+                <button className="kq-est-cancel-btn" onClick={() => setEditingTimeId(null)}>Cancel</button>
               </div>
             ) : (
               <div className="kq-est-time" onClick={() => handleEstimatedTimeEdit(order)} title="Click to edit estimated time">
                 {formatEstTime(order.estimatedTime || 15)}
-                <span className="kq-est-edit-icon">✎</span>
+                <span className="kq-est-edit-icon">Edit</span>
               </div>
             )}
           </div>
@@ -359,7 +359,7 @@ function KitchenQueue() {
           </div>
         </div>
 
-        {/* Right Sidebar — Metrics & Controls */}
+        {/* Right Sidebar - Metrics & Controls */}
         <div className="kq-sidebar">
           {/* Kitchen Load */}
           <div className="kq-metric-card">
@@ -403,7 +403,7 @@ function KitchenQueue() {
                   <span className="kq-emergency-btn-title">Pause Incoming Orders</span>
                   <span className="kq-emergency-btn-sub">Stop new orders from app</span>
                 </div>
-                <span className="kq-emergency-icon kq-icon-pause">⏸</span>
+                <span className="kq-emergency-icon kq-icon-pause">Pause</span>
               </button>
               <button
                 className={`kq-emergency-btn kq-emergency-resume ${!paused ? 'kq-emergency-active' : ''}`}
@@ -414,7 +414,7 @@ function KitchenQueue() {
                   <span className="kq-emergency-btn-title">Resume Orders</span>
                   <span className="kq-emergency-btn-sub">Back to normal operation</span>
                 </div>
-                <span className="kq-emergency-icon kq-icon-resume">▶</span>
+                <span className="kq-emergency-icon kq-icon-resume">Resume</span>
               </button>
             </div>
           </div>

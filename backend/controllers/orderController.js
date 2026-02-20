@@ -7,6 +7,69 @@ const generateOrderId = async (restaurantId) => {
     return `ORD-${String(count + 1).padStart(4, '0')}`;
 };
 
+// Create preorder from a user (for a specific restaurant)
+export const createUserPreorder = async (req, res) => {
+    try {
+        const { restaurantId, customerPhone, items } = req.body;
+
+        if (!restaurantId) {
+            return res.json({ success: false, message: 'Restaurant is required' });
+        }
+
+        if (!items || items.length === 0) {
+            return res.json({ success: false, message: 'At least one item is required' });
+        }
+
+        const customerName = req.user?.name || 'Customer';
+
+        // Fetch menu items to get current prices and prep times
+        const menuItemIds = items.map(i => i.menuItem);
+        const menuItems = await menuModel.find({ _id: { $in: menuItemIds }, restaurantId });
+
+        if (menuItems.length !== menuItemIds.length) {
+            return res.json({ success: false, message: 'One or more menu items not found' });
+        }
+
+        const menuMap = {};
+        menuItems.forEach(m => { menuMap[m._id.toString()] = m; });
+
+        let totalAmount = 0;
+        let maxPrepTime = 0;
+
+        const orderItems = items.map(item => {
+            const menu = menuMap[item.menuItem];
+            const qty = parseInt(item.quantity) || 1;
+            const itemTotal = menu.price * qty;
+            totalAmount += itemTotal;
+            if (menu.prepTime > maxPrepTime) maxPrepTime = menu.prepTime;
+            return {
+                menuItem: menu._id,
+                name: menu.name,
+                quantity: qty,
+                price: menu.price,
+                prepTime: menu.prepTime
+            };
+        });
+
+        const orderId = await generateOrderId(restaurantId);
+
+        const order = new orderModel({
+            orderId,
+            customerName,
+            customerPhone: customerPhone || '',
+            items: orderItems,
+            totalAmount,
+            estimatedTime: maxPrepTime,
+            restaurantId
+        });
+
+        await order.save();
+        return res.json({ success: true, message: 'Preorder created successfully', data: order });
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+};
+
 // Create new order
 export const createOrder = async (req, res) => {
     try {

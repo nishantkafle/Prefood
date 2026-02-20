@@ -170,7 +170,7 @@ function RestaurantDashboard() {
           {profile?.logo ? (
             <img src={profile.logo} alt="Logo" className="header-logo-img" />
           ) : (
-            <div className="header-logo-placeholder">🍽️</div>
+            <div className="header-logo-placeholder">Logo</div>
           )}
           <span className="logo">{profile?.restaurantName || 'HotStop'}</span>
         </div>
@@ -186,16 +186,16 @@ function RestaurantDashboard() {
       <div className="dashboard-main">
         <div className="sidebar">
           <div className={`sidebar-item ${activeSection === 'menu' ? 'active' : ''}`} onClick={() => setActiveSection('menu')}>
-            <span>📋</span> Menu Management
+            <span>Menu</span> Menu Management
           </div>
           <div className={`sidebar-item ${activeSection === 'orders' ? 'active' : ''}`} onClick={() => setActiveSection('orders')}>
-            <span>📦</span> Orders Management
+            <span>Orders</span> Orders Management
           </div>
           <div className={`sidebar-item ${activeSection === 'kitchen' ? 'active' : ''}`} onClick={() => setActiveSection('kitchen')}>
-            <span>🍳</span> Kitchen Queue
+            <span>Kitchen</span> Kitchen Queue
           </div>
           <div className={`sidebar-item ${activeSection === 'settings' ? 'active' : ''}`} onClick={() => setActiveSection('settings')}>
-            <span>⚙️</span> Settings
+            <span>Settings</span> Settings
           </div>
         </div>
 
@@ -309,7 +309,7 @@ function RestaurantDashboard() {
 
               <div className="stats-cards">
                 <div className="stat-card">
-                  <div className="stat-icon">🍽️</div>
+                  <div className="stat-icon">Menu</div>
                   <div className="stat-info">
                     <div className="stat-label">TOTAL ITEMS</div>
                     <div className="stat-value">{menuItems.length}</div>
@@ -332,7 +332,7 @@ function RestaurantDashboard() {
                           {item.image ? (
                             <img src={item.image} alt={item.name} />
                           ) : (
-                            <div className="placeholder-image">📷</div>
+                            <div className="placeholder-image">No Image</div>
                           )}
                         </div>
                         <div className="menu-item-details">
@@ -344,15 +344,15 @@ function RestaurantDashboard() {
                           </div>
                           <p className="menu-item-description">{item.description}</p>
                           <div className="menu-item-info">
-                            <span>💰 NPR {item.price}</span>
-                            <span>⏱️ {item.prepTime} min</span>
+                            <span>Price: NPR {item.price}</span>
+                            <span>Prep: {item.prepTime} min</span>
                           </div>
                           <div className="menu-item-actions">
                             <button className="edit-btn" onClick={() => handleEdit(item)}>
-                              ✏️ Edit
+                              Edit
                             </button>
                             <button className="delete-btn" onClick={() => handleDelete(item._id)}>
-                              🗑️ Delete
+                              Delete
                             </button>
                           </div>
                         </div>

@@ -9,12 +9,18 @@ import menuRouter from './routes/menuRoutes.js'
 import orderRouter from './routes/orderRoutes.js'
 const app = express();
 const port = process.env.PORT || 4000
-connectDB();
 
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
 app.use(cors({
-  origin: 'http://localhost:3000',
+  origin: function(origin, callback) {
+    const allowed = ['http://localhost:3000', 'http://localhost:3001'];
+    if (!origin || allowed.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }))
 
@@ -24,4 +30,9 @@ app.use('/api/auth', authRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/orders', orderRouter);
 
-app.listen(port, ()=> console.log(`Server started on PORT: ${port}`)); 
+const startServer = async () => {
+  await connectDB();
+  app.listen(port, ()=> console.log(`Server started on PORT: ${port}`));
+};
+
+startServer();
