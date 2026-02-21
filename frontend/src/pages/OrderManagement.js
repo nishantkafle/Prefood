@@ -21,7 +21,6 @@ function OrderManagement() {
 
   const fetchOrders = async () => {
     try {
-      setLoading(true);
       const response = await axios.get('http://localhost:4000/api/orders/all', { withCredentials: true });
       if (response.data.success) {
         const today = new Date();
@@ -34,8 +33,6 @@ function OrderManagement() {
       }
     } catch (err) {
       console.error('Error fetching orders:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -359,9 +356,7 @@ function OrderManagement() {
       )}
 
       <div className="orders-table-container">
-        {loading && !orders.length ? (
-          <div className="loading">Loading orders...</div>
-        ) : filteredOrders.length === 0 ? (
+        {filteredOrders.length === 0 ? (
           <div className="empty-state">
             <p>No {activeTab} orders found.</p>
           </div>

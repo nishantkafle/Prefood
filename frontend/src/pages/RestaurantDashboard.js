@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import OrderManagement from './OrderManagement';
+import KitchenHome from './KitchenHome';
 import KitchenQueue from './KitchenQueue';
 import RestaurantSettings from './RestaurantSettings';
 import './Dashboard.css';
 
 function RestaurantDashboard() {
   const navigate = useNavigate();
-  const [activeSection, setActiveSection] = useState('menu');
+  const [activeSection, setActiveSection] = useState('home');
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showForm, setShowForm] = useState(false);
@@ -179,28 +180,40 @@ function RestaurantDashboard() {
             {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
           </div>
           <button className="install-btn">Install App</button>
-          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>
       </div>
 
       <div className="dashboard-main">
         <div className="sidebar">
-          <div className={`sidebar-item ${activeSection === 'menu' ? 'active' : ''}`} onClick={() => setActiveSection('menu')}>
-            <span>Menu</span> Menu Management
+          <div className="sidebar-top">
+            <div className={`sidebar-item ${activeSection === 'home' ? 'active' : ''}`} onClick={() => setActiveSection('home')}>
+              Kitchen Analytics
+            </div>
+            <div className={`sidebar-item ${activeSection === 'kitchen' ? 'active' : ''}`} onClick={() => setActiveSection('kitchen')}>
+              Kitchen Queue
+            </div>
+            <div className={`sidebar-item ${activeSection === 'menu' ? 'active' : ''}`} onClick={() => setActiveSection('menu')}>
+              Menu Management
+            </div>
+            <div className={`sidebar-item ${activeSection === 'orders' ? 'active' : ''}`} onClick={() => setActiveSection('orders')}>
+              Orders Management
+            </div>
           </div>
-          <div className={`sidebar-item ${activeSection === 'orders' ? 'active' : ''}`} onClick={() => setActiveSection('orders')}>
-            <span>Orders</span> Orders Management
-          </div>
-          <div className={`sidebar-item ${activeSection === 'kitchen' ? 'active' : ''}`} onClick={() => setActiveSection('kitchen')}>
-            <span>Kitchen</span> Kitchen Queue
-          </div>
-          <div className={`sidebar-item ${activeSection === 'settings' ? 'active' : ''}`} onClick={() => setActiveSection('settings')}>
-            <span>Settings</span> Settings
+
+          <div className="sidebar-bottom">
+            <div className={`sidebar-item ${activeSection === 'settings' ? 'active' : ''}`} onClick={() => setActiveSection('settings')}>
+              Settings
+            </div>
+            <button className="sidebar-logout-btn" onClick={handleLogout}>Logout</button>
           </div>
         </div>
 
         <div className="dashboard-content">
-          {activeSection === 'menu' ? (
+          {activeSection === 'home' ? (
+            <KitchenHome />
+          ) : activeSection === 'kitchen' ? (
+            <KitchenQueue />
+          ) : activeSection === 'menu' ? (
             <>
               <div className="content-header">
                 <div>
@@ -364,8 +377,6 @@ function RestaurantDashboard() {
             </>
           ) : activeSection === 'orders' ? (
             <OrderManagement />
-          ) : activeSection === 'kitchen' ? (
-            <KitchenQueue />
           ) : activeSection === 'settings' ? (
             <RestaurantSettings profile={profile} onUpdate={fetchProfile} />
           ) : null}

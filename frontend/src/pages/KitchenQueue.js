@@ -3,7 +3,6 @@ import axios from 'axios';
 
 function KitchenQueue() {
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('all');
   const [paused, setPaused] = useState(false);
   const [draggedOrder, setDraggedOrder] = useState(null);
@@ -15,28 +14,23 @@ function KitchenQueue() {
 
   const fetchOrders = useCallback(async () => {
     try {
-      setLoading(true);
       const response = await axios.get('http://localhost:4000/api/orders/all', { withCredentials: true });
       if (response.data.success) {
         setOrders(response.data.data);
       }
     } catch (err) {
       console.error('Error fetching orders:', err);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     fetchOrders();
-    // Poll every 10 seconds for real-time sync
-    pollRef.current = setInterval(() => {
+    const pollId = setInterval(() => {
       fetchOrders();
     }, 10000);
-    return () => clearInterval(pollRef.current);
+    return () => clearInterval(pollId);
   }, [fetchOrders]);
 
-  // Elapsed time ticker - updates every second
   useEffect(() => {
     timerRef.current = setInterval(() => {
       setElapsedTimes(() => {
@@ -93,7 +87,6 @@ function KitchenQueue() {
     setEditingTimeId(null);
   };
 
-  // Drag and drop handlers
   const handleDragStart = (e, order) => {
     setDraggedOrder(order);
     e.dataTransfer.effectAllowed = 'move';
@@ -116,14 +109,6 @@ function KitchenQueue() {
     setDraggedOrder(null);
   };
 
-  // Helpers
-  const formatElapsed = (seconds) => {
-    if (!seconds || seconds < 0) return '0:00';
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
-
   const formatEstTime = (minutes) => {
     const m = Math.floor(minutes);
     const s = Math.round((minutes - m) * 60);
@@ -140,7 +125,6 @@ function KitchenQueue() {
     return elapsed > (order.estimatedTime || 15) * 45 && !isLate(order);
   };
 
-  // Filter orders
   const pendingOrders = orders.filter(o => o.status === 'pending');
   const cookingOrders = orders.filter(o => o.status === 'preparing');
   const readyOrders = orders.filter(o => o.status === 'ready');
@@ -152,7 +136,6 @@ function KitchenQueue() {
     return activeOrders;
   };
 
-  // Metrics
   const maxCapacity = 20;
   const kitchenLoad = Math.min(Math.round((activeOrders.length / maxCapacity) * 100), 100);
   const avgPrepTime = activeOrders.length > 0
@@ -296,9 +279,7 @@ function KitchenQueue() {
 
       <div className="kq-layout">
         <div className="kq-main">
-          {/* Columns */}
           <div className="kq-columns">
-            {/* Pending Column */}
             <div
               className={`kq-column ${draggedOrder ? 'kq-column-droppable' : ''}`}
               onDragOver={handleDragOver}
@@ -309,9 +290,7 @@ function KitchenQueue() {
                 <span className="kq-col-count">{pendingOrders.length}</span>
               </div>
               <div className="kq-column-body">
-                {loading && !orders.length ? (
-                  <div className="kq-empty">Loading...</div>
-                ) : pendingOrders.length === 0 ? (
+                {pendingOrders.length === 0 ? (
                   <div className="kq-empty">No pending orders</div>
                 ) : (
                   (filter === 'all' ? pendingOrders : getFilteredActive().filter(o => o.status === 'pending')).map(renderOrderCard)
@@ -319,7 +298,6 @@ function KitchenQueue() {
               </div>
             </div>
 
-            {/* Cooking Column */}
             <div
               className={`kq-column ${draggedOrder ? 'kq-column-droppable' : ''}`}
               onDragOver={handleDragOver}
@@ -338,7 +316,6 @@ function KitchenQueue() {
               </div>
             </div>
 
-            {/* Ready Column */}
             <div
               className={`kq-column ${draggedOrder ? 'kq-column-droppable' : ''}`}
               onDragOver={handleDragOver}
@@ -359,9 +336,7 @@ function KitchenQueue() {
           </div>
         </div>
 
-        {/* Right Sidebar - Metrics & Controls */}
         <div className="kq-sidebar">
-          {/* Kitchen Load */}
           <div className="kq-metric-card">
             <div className="kq-metric-header">
               <span className="kq-metric-title">Kitchen Load</span>
@@ -390,7 +365,6 @@ function KitchenQueue() {
             </div>
           </div>
 
-          {/* Emergency Controls */}
           <div className="kq-metric-card">
             <div className="kq-metric-title">Emergency Controls</div>
             <div className="kq-emergency-btns">
@@ -420,6 +394,7 @@ function KitchenQueue() {
           </div>
         </div>
       </div>
+
     </>
   );
 }
