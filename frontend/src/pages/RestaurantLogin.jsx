@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './Auth.css';
+import SmallBackButton from '../components/SmallBackButton';
 
 function RestaurantLogin() {
   const navigate = useNavigate();
@@ -48,6 +49,7 @@ function RestaurantLogin() {
 
       <div className="auth-content">
         <div className="auth-card">
+          <SmallBackButton />
           <h2>Welcome to HotStop</h2>
           
           <form onSubmit={handleSubmit}>

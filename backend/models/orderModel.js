@@ -10,14 +10,16 @@ const orderItemSchema = new mongoose.Schema({
 
 const orderSchema = new mongoose.Schema({
     orderId: { type: String, required: true },
+    customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
     customerName: { type: String, required: true },
     customerPhone: { type: String, default: '' },
     items: [orderItemSchema],
     totalAmount: { type: Number, required: true },
     estimatedTime: { type: Number, required: true }, // in minutes
+    acceptedAt: { type: Date, default: null },
     status: {
         type: String,
-        enum: ['pending', 'preparing', 'ready', 'completed', 'cancelled'],
+        enum: ['pending', 'accepted', 'cooking', 'preparing', 'ready', 'completed', 'cancelled', 'delayed'],
         default: 'pending'
     },
     restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true }

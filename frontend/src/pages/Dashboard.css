@@ -33,6 +33,22 @@
   font-size: 14px;
 }
 
+@media (max-width: 1200px) {
+  .restaurant-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .restaurant-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .user-dashboard-content {
+    padding: 24px 18px;
+  }
+}
+
 .install-btn {
   background-color: #4caf50;
   color: white;
@@ -1725,7 +1741,7 @@
 
 .user-dashboard-content {
   padding: 30px 40px;
-  max-width: 1200px;
+  max-width: 1320px;
   margin: 0 auto;
 }
 
@@ -1764,22 +1780,24 @@
 
 .restaurant-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
 }
 
 .restaurant-card {
-  background: #fff;
-  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf4 100%);
+  border: 1px solid #f1e1d3;
+  border-radius: 16px;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 8px 24px rgba(23, 17, 9, 0.08);
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
 }
 
 .restaurant-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  transform: translateY(-6px);
+  box-shadow: 0 14px 32px rgba(23, 17, 9, 0.14);
+  border-color: #ffcfaa;
 }
 
 .restaurant-card-img-wrap {
@@ -1815,12 +1833,12 @@
 
 .restaurant-card-cuisine {
   display: inline-block;
-  background: #fff3e0;
-  color: #e65100;
+  background: #fff1e4;
+  color: #cf5200;
   font-size: 11px;
-  padding: 2px 10px;
+  padding: 4px 12px;
   border-radius: 12px;
-  font-weight: 500;
+  font-weight: 600;
   margin-bottom: 6px;
 }
 
@@ -2023,7 +2041,7 @@
 /* ========== USER MENU PAGE (3-Column Layout) ========== */
 .um-page {
   min-height: 100vh;
-  background: #f8f8f8;
+  background: radial-gradient(circle at top right, #fff2e7 0%, #f7f7f7 40%, #f5f5f5 100%);
   display: flex;
   flex-direction: column;
 }
@@ -2183,6 +2201,12 @@
   margin: 0;
 }
 
+.um-menu-subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #8b8b8b;
+}
+
 .um-view-toggle {
   display: flex;
   gap: 4px;
@@ -2231,10 +2255,11 @@
 
 /* Food Card */
 .um-food-card {
-  background: white;
-  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fffdfa 100%);
+  border-radius: 14px;
+  border: 1px solid #f2e6da;
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
   display: flex;
   flex-direction: column;
   transition: transform 0.2s, box-shadow 0.2s;
@@ -2242,7 +2267,7 @@
 
 .um-food-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.1);
 }
 
 .um-food-img {
@@ -2314,6 +2339,16 @@
   color: #999;
   display: flex;
   gap: 12px;
+  align-items: center;
+}
+
+.um-food-category {
+  background: #fff3e7;
+  color: #d25a0a;
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-weight: 600;
 }
 
 .um-food-bottom {
@@ -2383,8 +2418,8 @@
 .um-cart-panel {
   width: 300px;
   min-width: 300px;
-  background: white;
-  border-left: 1px solid #eee;
+  background: #ffffff;
+  border-left: 1px solid #f0e1d5;
   display: flex;
   flex-direction: column;
   position: sticky;
@@ -2406,6 +2441,19 @@
   color: #ff6600;
 }
 
+.um-cart-subtitle {
+  margin: 3px 0 0;
+  color: #8a8a8a;
+  font-size: 11px;
+}
+
+.um-cart-header-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
 .um-cart-count {
   background: #ff6600;
   color: white;
@@ -2413,6 +2461,21 @@
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 20px;
+}
+
+.um-cart-clear {
+  border: 1px solid #ffd9bc;
+  background: #fff8f2;
+  color: #cb4d00;
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.um-cart-clear:hover {
+  background: #ffeee0;
 }
 
 .um-cart-empty {
@@ -2520,11 +2583,21 @@
   background: #f5f5f5;
 }
 
-.um-cart-item-qty span {
-  width: 22px;
+.um-cart-item-qty input {
+  width: 34px;
+  border: none;
   text-align: center;
   font-size: 12px;
   font-weight: 600;
+  color: #333;
+  background: #fff;
+  outline: none;
+}
+
+.um-cart-item-qty input::-webkit-outer-spin-button,
+.um-cart-item-qty input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .um-cart-item-remove {

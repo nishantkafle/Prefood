@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import './Auth.css';
+import SmallBackButton from '../components/SmallBackButton';
 
 function RestaurantRegister() {
   const navigate = useNavigate();
@@ -113,6 +114,7 @@ function RestaurantRegister() {
 
       <div className="auth-content">
         <div className="auth-card restaurant-card">
+          <SmallBackButton />
           <h2>Restaurant Registration</h2>
           <p className="subtitle">Join our network and start reaching new hungry customers today. Complete the form below to get started.</p>
           

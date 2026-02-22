@@ -147,7 +147,7 @@ function OrderManagement() {
     let filtered = orders;
 
     if (activeTab === 'ongoing') {
-      filtered = filtered.filter(o => ['pending', 'preparing'].includes(o.status));
+      filtered = filtered.filter(o => ['pending', 'accepted', 'cooking', 'preparing', 'delayed'].includes(o.status));
     } else if (activeTab === 'ready') {
       filtered = filtered.filter(o => o.status === 'ready');
     } else if (activeTab === 'completed') {
@@ -168,7 +168,7 @@ function OrderManagement() {
   };
 
   const getTabCount = (tab) => {
-    if (tab === 'ongoing') return orders.filter(o => ['pending', 'preparing'].includes(o.status)).length;
+    if (tab === 'ongoing') return orders.filter(o => ['pending', 'accepted', 'cooking', 'preparing', 'delayed'].includes(o.status)).length;
     if (tab === 'ready') return orders.filter(o => o.status === 'ready').length;
     if (tab === 'completed') return orders.filter(o => o.status === 'completed').length;
     if (tab === 'cancelled') return orders.filter(o => o.status === 'cancelled').length;
@@ -192,10 +192,13 @@ function OrderManagement() {
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'pending': return 'status-badge pending';
+      case 'accepted': return 'status-badge preparing';
+      case 'cooking': return 'status-badge preparing';
       case 'preparing': return 'status-badge preparing';
       case 'ready': return 'status-badge ready';
       case 'completed': return 'status-badge completed';
       case 'cancelled': return 'status-badge cancelled';
+      case 'delayed': return 'status-badge cancelled';
       default: return 'status-badge';
     }
   };
@@ -206,12 +209,21 @@ function OrderManagement() {
         return (
           <>
             <button className="action-btn reject" onClick={() => handleUpdateStatus(order._id, 'cancelled')}>Reject</button>
-            <button className="action-btn accept" onClick={() => handleUpdateStatus(order._id, 'preparing')}>Accept</button>
+            <button className="action-btn accept" onClick={() => handleUpdateStatus(order._id, 'accepted')}>Accept</button>
           </>
         );
-      case 'preparing':
+      case 'accepted':
         return (
-          <button className="action-btn mark-ready" onClick={() => handleUpdateStatus(order._id, 'ready')}>Mark Ready</button>
+          <button className="action-btn accept" onClick={() => handleUpdateStatus(order._id, 'cooking')}>Start Cooking</button>
+        );
+      case 'cooking':
+      case 'preparing':
+      case 'delayed':
+        return (
+          <>
+            <button className="action-btn reject" onClick={() => handleUpdateStatus(order._id, 'delayed')}>Mark Delayed</button>
+            <button className="action-btn mark-ready" onClick={() => handleUpdateStatus(order._id, 'ready')}>Mark Ready</button>
+          </>
         );
       case 'ready':
         return (

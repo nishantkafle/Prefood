@@ -37,8 +37,8 @@ function KitchenQueue() {
         const now = Date.now();
         const times = {};
         orders.forEach(order => {
-          const created = new Date(order.createdAt).getTime();
-          times[order._id] = Math.floor((now - created) / 1000);
+          const base = getTimerBaseTime(order);
+          times[order._id] = Math.max(0, Math.floor((now - base) / 1000));
         });
         return times;
       });
@@ -54,7 +54,15 @@ function KitchenQueue() {
         { withCredentials: true }
       );
       if (response.data.success) {
-        setOrders(prev => prev.map(o => o._id === orderId ? { ...o, status: newStatus } : o));
+        setOrders(prev => prev.map(o => {
+          if (o._id !== orderId) return o;
+          const shouldSetAcceptedAt = !o.acceptedAt && ['accepted', 'cooking', 'preparing', 'delayed', 'ready', 'completed'].includes(newStatus);
+          return {
+            ...o,
+            status: newStatus,
+            acceptedAt: shouldSetAcceptedAt ? new Date().toISOString() : o.acceptedAt
+          };
+        }));
       }
     } catch (err) {
       console.error('Error updating order status:', err);
@@ -115,18 +123,43 @@ function KitchenQueue() {
     return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
   };
 
+  const formatSeconds = (seconds) => {
+    const total = Math.max(0, Math.floor(seconds));
+    const mins = Math.floor(total / 60);
+    const secs = total % 60;
+    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+  };
+
+  const isFoodReady = (order) => ['ready', 'completed'].includes(order.status);
+
+  const isTimerStarted = (order) => ['accepted', 'cooking', 'preparing', 'delayed'].includes(order.status);
+
+  const getTimerBaseTime = (order) => {
+    if (order.acceptedAt) return new Date(order.acceptedAt).getTime();
+    if (isTimerStarted(order) && order.updatedAt) return new Date(order.updatedAt).getTime();
+    return new Date(order.createdAt).getTime();
+  };
+
+  const getRemainingSeconds = (order) => {
+    if (!isTimerStarted(order)) return (order.estimatedTime || 15) * 60;
+    const elapsed = elapsedTimes[order._id] || 0;
+    return Math.max(0, (order.estimatedTime || 15) * 60 - elapsed);
+  };
+
   const isLate = (order) => {
+    if (!isTimerStarted(order)) return false;
     const elapsed = elapsedTimes[order._id] || 0;
     return elapsed > (order.estimatedTime || 15) * 60;
   };
 
   const isPriority = (order) => {
+    if (!isTimerStarted(order)) return false;
     const elapsed = elapsedTimes[order._id] || 0;
     return elapsed > (order.estimatedTime || 15) * 45 && !isLate(order);
   };
 
   const pendingOrders = orders.filter(o => o.status === 'pending');
-  const cookingOrders = orders.filter(o => o.status === 'preparing');
+  const cookingOrders = orders.filter(o => ['accepted', 'cooking', 'preparing', 'delayed'].includes(o.status));
   const readyOrders = orders.filter(o => o.status === 'ready');
   const activeOrders = [...pendingOrders, ...cookingOrders];
 
@@ -175,6 +208,8 @@ function KitchenQueue() {
     const elapsedMin = Math.floor(elapsed / 60);
     const late = isLate(order);
     const priority = isPriority(order);
+    const timerStarted = isTimerStarted(order);
+    const remainingSeconds = getRemainingSeconds(order);
 
     return (
       <div
@@ -217,10 +252,13 @@ function KitchenQueue() {
         </div>
         <div className="kq-card-sub">
           <span className="kq-card-meta">{order.customerName}</span>
-          <span className="kq-card-meta">{elapsedMin} min{elapsedMin !== 1 ? 's' : ''} ago</span>
+          <span className="kq-card-meta">{isFoodReady(order) ? 'Food ready for pickup' : timerStarted ? `${elapsedMin} min${elapsedMin !== 1 ? 's' : ''} since accepted` : 'Waiting for acceptance'}</span>
         </div>
         <div className="kq-card-sub" style={{ fontSize: '11px', color: '#999' }}>
           Est. Cooking Time
+        </div>
+        <div className="kq-card-sub" style={{ fontSize: '12px', color: '#333', fontWeight: 600 }}>
+          {isFoodReady(order) ? 'Food ready' : timerStarted ? `Time Left: ${formatSeconds(remainingSeconds)}` : 'Timer starts after acceptance'}
         </div>
 
         <div className="kq-card-items">
@@ -234,11 +272,11 @@ function KitchenQueue() {
 
         <div className="kq-card-actions">
           {order.status === 'pending' && (
-            <button className="kq-btn kq-btn-cook" onClick={() => updateOrderStatus(order._id, 'preparing')}>
+            <button className="kq-btn kq-btn-cook" onClick={() => updateOrderStatus(order._id, 'cooking')}>
               Mark as Cooking
             </button>
           )}
-          {order.status === 'preparing' && (
+          {['accepted', 'cooking', 'preparing', 'delayed'].includes(order.status) && (
             <button className="kq-btn kq-btn-cooked" onClick={() => updateOrderStatus(order._id, 'ready')}>
               Mark as Cooked
             </button>
@@ -301,7 +339,7 @@ function KitchenQueue() {
             <div
               className={`kq-column ${draggedOrder ? 'kq-column-droppable' : ''}`}
               onDragOver={handleDragOver}
-              onDrop={(e) => handleDrop(e, 'preparing')}
+              onDrop={(e) => handleDrop(e, 'cooking')}
             >
               <div className="kq-column-header kq-col-cooking">
                 <span>Cooking</span>
@@ -311,7 +349,7 @@ function KitchenQueue() {
                 {cookingOrders.length === 0 ? (
                   <div className="kq-empty">No orders cooking</div>
                 ) : (
-                  (filter === 'all' ? cookingOrders : getFilteredActive().filter(o => o.status === 'preparing')).map(renderOrderCard)
+                  (filter === 'all' ? cookingOrders : getFilteredActive().filter(o => ['accepted', 'cooking', 'preparing', 'delayed'].includes(o.status))).map(renderOrderCard)
                 )}
               </div>
             </div>

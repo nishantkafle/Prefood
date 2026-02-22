@@ -31,3 +31,19 @@ export const isRestaurant = (req, res, next) => {
         return res.json({ success: false, message: 'Restaurant access required' });
     }
 };
+
+export const isRestaurantOrAdmin = (req, res, next) => {
+    if (req.user && (req.user.role === 'restaurant' || req.user.role === 'admin')) {
+        next();
+    } else {
+        return res.json({ success: false, message: 'Restaurant or admin access required' });
+    }
+};
+
+export const isUser = (req, res, next) => {
+    if (req.user && req.user.role === 'user') {
+        next();
+    } else {
+        return res.json({ success: false, message: 'User access required' });
+    }
+};

@@ -2,11 +2,14 @@ import express from "express";
 import cors from "cors";
 import 'dotenv/config';
 import cookieParser from "cookie-parser";
+import http from 'http';
 
 import connectDB from './config/mongodb.js'
 import authRouter from './routes/authRoutes.js'
 import menuRouter from './routes/menuRoutes.js'
 import orderRouter from './routes/orderRoutes.js'
+import { initSocket } from './utils/socket.js';
+
 const app = express();
 const port = process.env.PORT || 4000
 
@@ -32,7 +35,9 @@ app.use('/api/orders', orderRouter);
 
 const startServer = async () => {
   await connectDB();
-  app.listen(port, ()=> console.log(`Server started on PORT: ${port}`));
+  const server = http.createServer(app);
+  server.listen(port, ()=> console.log(`Server started on PORT: ${port}`));
+  initSocket(server);
 };
 
 startServer();

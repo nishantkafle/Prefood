@@ -1,5 +1,70 @@
 import orderModel from '../models/orderModel.js';
 import menuModel from '../models/menuModel.js';
+import { getIO } from '../utils/socket.js';
+
+const VALID_STATUSES = ['pending', 'accepted', 'cooking', 'preparing', 'ready', 'completed', 'cancelled', 'delayed'];
+
+const TRACKING_STAGES = ['Order Created', 'Order Accepted', 'Cooking', 'Ready'];
+
+const STATUS_STAGE_INDEX = {
+    pending: 0,
+    accepted: 1,
+    cooking: 2,
+    preparing: 2,
+    delayed: 2,
+    ready: 3,
+    completed: 3,
+    cancelled: -1
+};
+
+const isLikelyOrderCode = (value) => /^ORD-\d+$/i.test(value);
+
+const buildTrackingResponse = (order) => {
+    const now = Date.now();
+    const normalizedStatus = order.status === 'preparing' ? 'cooking' : order.status;
+    const timerStarted = ['accepted', 'cooking', 'delayed', 'ready', 'completed'].includes(normalizedStatus);
+    const acceptedTimestamp = order.acceptedAt
+        ? new Date(order.acceptedAt).getTime()
+        : (timerStarted && order.updatedAt ? new Date(order.updatedAt).getTime() : null);
+    const effectiveStartTimestamp = acceptedTimestamp || new Date(order.createdAt).getTime();
+    const readyAt = effectiveStartTimestamp + (Number(order.estimatedTime) || 0) * 60 * 1000;
+    const remainingSeconds = timerStarted
+        ? Math.max(0, Math.ceil((readyAt - now) / 1000))
+        : (Number(order.estimatedTime) || 0) * 60;
+
+    return {
+        _id: order._id,
+        orderId: order.orderId,
+        restaurantName: order.restaurantId?.restaurantName || 'Unknown Restaurant',
+        placedAt: order.createdAt,
+        totalAmount: order.totalAmount,
+        estimatedTime: Number(order.estimatedTime) || 0,
+        estimatedReadyAt: new Date(readyAt).toISOString(),
+        remainingSeconds,
+        timerStarted,
+        status: normalizedStatus,
+        timeline: {
+            stages: TRACKING_STAGES,
+            activeStageIndex: STATUS_STAGE_INDEX[normalizedStatus] ?? 0
+        },
+        items: order.items.map((item) => ({
+            name: item.name,
+            quantity: item.quantity,
+            price: item.price,
+            lineTotal: item.price * item.quantity
+        })),
+        isCancelled: normalizedStatus === 'cancelled',
+        isDelayed: normalizedStatus === 'delayed',
+        lastUpdatedAt: order.updatedAt
+    };
+};
+
+const buildUpdateQuery = (user, id) => {
+    if (user.role === 'admin') {
+        return { _id: id };
+    }
+    return { _id: id, restaurantId: user._id };
+};
 
 // Generate unique order ID
 const generateOrderId = async (restaurantId) => {
@@ -55,6 +120,7 @@ export const createUserPreorder = async (req, res) => {
 
         const order = new orderModel({
             orderId,
+            customerId: req.user?._id,
             customerName,
             customerPhone: customerPhone || '',
             items: orderItems,
@@ -64,6 +130,8 @@ export const createUserPreorder = async (req, res) => {
         });
 
         await order.save();
+        const io = getIO();
+        if (io) io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
         return res.json({ success: true, message: 'Preorder created successfully', data: order });
     } catch (error) {
         return res.json({ success: false, message: error.message });
@@ -122,9 +190,77 @@ export const createOrder = async (req, res) => {
         });
 
         await order.save();
+        const io = getIO();
+        if (io) io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
         return res.json({ success: true, message: 'Order created successfully', data: order });
     } catch (error) {
         return res.json({ success: false, message: error.message });
+    }
+};
+
+// Customer view for a single order (by _id or orderId)
+export const getOrderForCustomer = async (req, res) => {
+    try {
+        const { id } = req.params;
+        if (!id || (!id.match(/^[0-9a-fA-F]{24}$/) && !isLikelyOrderCode(id))) {
+            return res.status(400).json({ success: false, message: 'Invalid order ID format' });
+        }
+
+        // Try by ObjectId first, then by orderId
+        let order = null;
+        if (id.match(/^[0-9a-fA-F]{24}$/)) {
+            order = await orderModel.findById(id).populate('restaurantId', 'restaurantName phone');
+        }
+
+        if (!order) {
+            order = await orderModel.findOne({ orderId: id }).populate('restaurantId', 'restaurantName phone');
+        }
+
+        if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+
+        // Restrict visibility to authenticated customer only
+        if (!order.customerId || !req.user || order.customerId.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ success: false, message: 'Access denied for this order' });
+        }
+
+        return res.json({ success: true, data: buildTrackingResponse(order) });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
+    }
+};
+
+// Get all orders for authenticated customer
+export const getOrdersForCustomer = async (req, res) => {
+    try {
+        const customerId = req.user?._id;
+        const orders = await orderModel
+            .find({ customerId })
+            .populate('restaurantId', 'restaurantName')
+            .sort({ createdAt: -1 });
+
+        const data = orders.map((order) => {
+            const tracking = buildTrackingResponse(order);
+            return {
+                _id: tracking._id,
+                orderId: tracking.orderId,
+                restaurantName: tracking.restaurantName,
+                placedAt: tracking.placedAt,
+                totalAmount: tracking.totalAmount,
+                estimatedTime: tracking.estimatedTime,
+                remainingSeconds: tracking.remainingSeconds,
+                timerStarted: tracking.timerStarted,
+                status: tracking.status,
+                isCancelled: tracking.isCancelled,
+                isDelayed: tracking.isDelayed,
+                itemCount: Array.isArray(order.items)
+                    ? order.items.reduce((sum, item) => sum + (Number(item.quantity) || 0), 0)
+                    : 0
+            };
+        });
+
+        return res.json({ success: true, data });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -144,23 +280,29 @@ export const updateOrderStatus = async (req, res) => {
     try {
         const { id } = req.params;
         const { status } = req.body;
-        const restaurantId = req.user._id;
+        const normalizedStatus = status === 'preparing' ? 'cooking' : status;
 
-        if (!['pending', 'preparing', 'ready', 'completed', 'cancelled'].includes(status)) {
-            return res.json({ success: false, message: 'Invalid status' });
+        if (!VALID_STATUSES.includes(normalizedStatus)) {
+            return res.status(400).json({ success: false, message: 'Invalid status' });
         }
 
-        const order = await orderModel.findOne({ _id: id, restaurantId });
+        const order = await orderModel.findOne(buildUpdateQuery(req.user, id));
 
         if (!order) {
-            return res.json({ success: false, message: 'Order not found' });
+            return res.status(404).json({ success: false, message: 'Order not found' });
         }
 
-        order.status = status;
+        if (!order.acceptedAt && ['accepted', 'cooking', 'preparing', 'delayed', 'ready', 'completed'].includes(normalizedStatus)) {
+            order.acceptedAt = new Date();
+        }
+
+        order.status = normalizedStatus;
         await order.save();
+        const io = getIO();
+        if (io) io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
         return res.json({ success: true, message: 'Order status updated', data: order });
     } catch (error) {
-        return res.json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -169,23 +311,25 @@ export const updateEstimatedTime = async (req, res) => {
     try {
         const { id } = req.params;
         const { estimatedTime } = req.body;
-        const restaurantId = req.user._id;
+        const parsedEstimatedTime = Number(estimatedTime);
 
-        if (!estimatedTime || estimatedTime < 1) {
-            return res.json({ success: false, message: 'Estimated time must be at least 1 minute' });
+        if (!Number.isFinite(parsedEstimatedTime) || parsedEstimatedTime < 1) {
+            return res.status(400).json({ success: false, message: 'Estimated time must be at least 1 minute' });
         }
 
-        const order = await orderModel.findOne({ _id: id, restaurantId });
+        const order = await orderModel.findOne(buildUpdateQuery(req.user, id));
 
         if (!order) {
-            return res.json({ success: false, message: 'Order not found' });
+            return res.status(404).json({ success: false, message: 'Order not found' });
         }
 
-        order.estimatedTime = estimatedTime;
+        order.estimatedTime = parsedEstimatedTime;
         await order.save();
+        const io = getIO();
+        if (io) io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
         return res.json({ success: true, message: 'Estimated time updated', data: order });
     } catch (error) {
-        return res.json({ success: false, message: error.message });
+        return res.status(500).json({ success: false, message: error.message });
     }
 };
 
