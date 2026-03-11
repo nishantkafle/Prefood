@@ -1,5 +1,6 @@
 import orderModel from '../models/orderModel.js';
 import menuModel from '../models/menuModel.js';
+import userModel from '../models/userModel.js';
 import { getIO } from '../utils/socket.js';
 
 const VALID_STATUSES = ['pending', 'accepted', 'cooking', 'preparing', 'ready', 'completed', 'cancelled', 'delayed'];
@@ -348,5 +349,32 @@ export const deleteOrder = async (req, res) => {
         return res.json({ success: true, message: 'Order deleted successfully' });
     } catch (error) {
         return res.json({ success: false, message: error.message });
+    }
+};
+
+export const getRestaurantCustomerProfile = async (req, res) => {
+    try {
+        const { customerId } = req.params;
+        const restaurantId = req.user._id;
+
+        const customer = await userModel.findOne({ _id: customerId, role: 'user' }).select('name email');
+        if (!customer) {
+            return res.status(404).json({ success: false, message: 'Customer not found' });
+        }
+
+        const orders = await orderModel
+            .find({ restaurantId, customerId })
+            .sort({ createdAt: -1 })
+            .lean();
+
+        return res.json({
+            success: true,
+            data: {
+                customer,
+                orders
+            }
+        });
+    } catch (error) {
+        return res.status(500).json({ success: false, message: error.message });
     }
 };

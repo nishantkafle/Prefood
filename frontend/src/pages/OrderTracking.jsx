@@ -249,7 +249,7 @@ export default function OrderTracking() {
 
                   return (
                     <div key={s} className={`stage stage-${stageState}`}>
-                      <div className="dot">{i < activeIndex ? '✓' : i + 1}</div>
+                      <div className="dot">{i + 1}</div>
                       <div className="label">{s}</div>
                     </div>
                   );
@@ -261,7 +261,7 @@ export default function OrderTracking() {
           <div className="ot-panel estimate">
             <h3>Estimated Preparation</h3>
             {order.isCancelled ? (
-              <div className="ot-eta-value">—</div>
+              <div className="ot-eta-value">-</div>
             ) : isFoodReady(order) ? (
               <div className="ot-eta-value">Food ready</div>
             ) : order.isDelayed ? (

@@ -19,6 +19,14 @@ export const initSocket = (server) => {
     socket.on('leaveOrder', (orderId) => {
       if (orderId) socket.leave(`order_${orderId}`);
     });
+
+    socket.on('joinUser', (userId) => {
+      if (userId) socket.join(`user_${userId}`);
+    });
+
+    socket.on('leaveUser', (userId) => {
+      if (userId) socket.leave(`user_${userId}`);
+    });
   });
 
   return io;

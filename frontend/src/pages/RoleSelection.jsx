@@ -23,6 +23,9 @@ function RoleSelection() {
           <button className="role-btn restaurant-btn" onClick={() => navigate('/restaurant/login')}>
             Restaurant
           </button>
+          <button className="role-btn admin-btn" onClick={() => navigate('/admin/login')}>
+            Admin
+          </button>
         </div>
       </div>
 

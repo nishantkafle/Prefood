@@ -180,7 +180,9 @@ export const register = async (req, res) => {
 
  export const getAllRestaurants = async (req, res) => {
     try {
-        const restaurants = await userModel.find({ role: 'restaurant' }).select('restaurantName logo location cuisineType restaurantType serviceType openingTime closingTime phone');
+        const restaurants = await userModel
+            .find({ role: 'restaurant', isActive: { $ne: false } })
+            .select('restaurantName logo location cuisineType restaurantType serviceType openingTime closingTime phone isActive');
         return res.json({ success: true, data: restaurants });
     } catch (error) {
         return res.json({ success: false, message: error.message });
@@ -191,9 +193,11 @@ export const register = async (req, res) => {
     try {
         const { restaurantId } = req.params;
         const menuModel = (await import('../models/menuModel.js')).default;
-        const restaurant = await userModel.findById(restaurantId).select('restaurantName logo location cuisineType');
+        const restaurant = await userModel
+            .findOne({ _id: restaurantId, role: 'restaurant', isActive: { $ne: false } })
+            .select('restaurantName logo location cuisineType isActive');
         if (!restaurant) {
-            return res.json({ success: false, message: 'Restaurant not found' });
+            return res.json({ success: false, message: 'Restaurant not found or inactive' });
         }
         const menuItems = await menuModel.find({ restaurantId });
         return res.json({ success: true, data: { restaurant, menuItems } });
@@ -201,6 +205,124 @@ export const register = async (req, res) => {
         return res.json({ success: false, message: error.message });
     }
  };
+
+// ─── ADMIN CONTROLLERS ───────────────────────────────────────────────────────
+
+export const adminGetStats = async (req, res) => {
+    try {
+        const totalUsers = await userModel.countDocuments({ role: 'user' });
+        const totalRestaurants = await userModel.countDocuments({ role: 'restaurant' });
+        return res.json({ success: true, data: { totalUsers, totalRestaurants } });
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+};
+
+export const adminGetAllUsers = async (req, res) => {
+    try {
+        const users = await userModel.find({ role: 'user' }).select('-password');
+        return res.json({ success: true, data: users });
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+};
+
+export const adminGetAllRestaurants = async (req, res) => {
+    try {
+        const restaurants = await userModel.find({ role: 'restaurant' }).select('-password');
+        return res.json({ success: true, data: restaurants });
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+};
+
+export const adminUpdateUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, email } = req.body;
+        const user = await userModel.findOne({ _id: id, role: 'user' });
+        if (!user) return res.json({ success: false, message: 'User not found' });
+        if (name !== undefined) user.name = name;
+        if (email !== undefined) user.email = email;
+        await user.save();
+        return res.json({ success: true, message: 'User updated successfully', data: user });
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+};
+
+export const adminUpdateRestaurant = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { name, email, restaurantName, location, phone, cuisineType, restaurantType, serviceType, openingTime, closingTime, isActive } = req.body;
+        const restaurant = await userModel.findOne({ _id: id, role: 'restaurant' });
+        if (!restaurant) return res.json({ success: false, message: 'Restaurant not found' });
+        if (name !== undefined) restaurant.name = name;
+        if (email !== undefined) restaurant.email = email;
+        if (restaurantName !== undefined) restaurant.restaurantName = restaurantName;
+        if (location !== undefined) restaurant.location = location;
+        if (phone !== undefined) restaurant.phone = phone;
+        if (cuisineType !== undefined) restaurant.cuisineType = cuisineType;
+        if (restaurantType !== undefined) restaurant.restaurantType = restaurantType;
+        if (serviceType !== undefined) restaurant.serviceType = serviceType;
+        if (openingTime !== undefined) restaurant.openingTime = openingTime;
+        if (closingTime !== undefined) restaurant.closingTime = closingTime;
+        if (isActive !== undefined) restaurant.isActive = !!isActive;
+        await restaurant.save();
+        return res.json({ success: true, message: 'Restaurant updated successfully', data: restaurant });
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+};
+
+export const adminToggleRestaurantStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { isActive } = req.body;
+
+        if (typeof isActive !== 'boolean') {
+            return res.json({ success: false, message: 'isActive must be a boolean value' });
+        }
+
+        const restaurant = await userModel.findOne({ _id: id, role: 'restaurant' });
+        if (!restaurant) return res.json({ success: false, message: 'Restaurant not found' });
+
+        restaurant.isActive = isActive;
+        await restaurant.save();
+
+        return res.json({
+            success: true,
+            message: `Restaurant ${isActive ? 'activated' : 'deactivated'} successfully`,
+            data: restaurant
+        });
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+};
+
+export const adminDeleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deleted = await userModel.findOneAndDelete({ _id: id, role: 'user' });
+        if (!deleted) return res.json({ success: false, message: 'User not found' });
+        return res.json({ success: true, message: 'User deleted successfully' });
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+};
+
+export const adminDeleteRestaurant = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deleted = await userModel.findOneAndDelete({ _id: id, role: 'restaurant' });
+        if (!deleted) return res.json({ success: false, message: 'Restaurant not found' });
+        return res.json({ success: true, message: 'Restaurant deleted successfully' });
+    } catch (error) {
+        return res.json({ success: false, message: error.message });
+    }
+};
+
+// ─── END ADMIN CONTROLLERS ────────────────────────────────────────────────────
 
  export const logout = async (req, res) =>{
     try{

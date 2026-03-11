@@ -6,7 +6,6 @@ import KitchenHome from './KitchenHome';
 import KitchenQueue from './KitchenQueue';
 import RestaurantSettings from './RestaurantSettings';
 import './Dashboard.css';
-import SmallBackButton from '../components/SmallBackButton';
 
 function RestaurantDashboard() {
   const navigate = useNavigate();
@@ -210,7 +209,6 @@ function RestaurantDashboard() {
         </div>
 
         <div className="dashboard-content">
-          <SmallBackButton />
           {activeSection === 'home' ? (
             <KitchenHome />
           ) : activeSection === 'kitchen' ? (

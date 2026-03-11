@@ -1,5 +1,5 @@
 import express from 'express';
-import { createOrder, createUserPreorder, getOrders, getOrdersForCustomer, updateOrderStatus, updateEstimatedTime, deleteOrder, getOrderForCustomer } from '../controllers/orderController.js';
+import { createOrder, createUserPreorder, getOrders, getOrdersForCustomer, updateOrderStatus, updateEstimatedTime, deleteOrder, getOrderForCustomer, getRestaurantCustomerProfile } from '../controllers/orderController.js';
 import { authenticate, isRestaurant, isRestaurantOrAdmin, isUser } from '../middleware/authMiddleware.js';
 
 const orderRouter = express.Router();
@@ -22,6 +22,7 @@ orderRouter.use(isRestaurant);
 
 orderRouter.post('/create', createOrder);
 orderRouter.get('/all', getOrders);
+orderRouter.get('/customer/:customerId/details', getRestaurantCustomerProfile);
 orderRouter.delete('/:id', deleteOrder);
 
 export default orderRouter;

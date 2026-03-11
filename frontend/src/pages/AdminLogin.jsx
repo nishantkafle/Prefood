@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Auth.css';
+import SmallBackButton from '../components/SmallBackButton';
 
-function RestaurantLogin() {
+function AdminLogin() {
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -20,15 +18,14 @@ function RestaurantLogin() {
     e.preventDefault();
     setError('');
     setLoading(true);
-
     try {
-      const response = await axios.post('http://localhost:4000/api/auth/login', {
-        ...formData,
-        role: 'restaurant'
-      }, { withCredentials: true });
-
+      const response = await axios.post(
+        'http://localhost:4000/api/auth/login',
+        { ...formData, role: 'admin' },
+        { withCredentials: true }
+      );
       if (response.data.success) {
-        navigate('/restaurant/dashboard');
+        navigate('/admin/dashboard');
       } else {
         setError(response.data.message || 'Login failed');
       }
@@ -48,21 +45,24 @@ function RestaurantLogin() {
 
       <div className="auth-content">
         <div className="auth-card">
-          <h2>Welcome to HotStop</h2>
-          
+          <SmallBackButton />
+          <div className="admin-badge">Admin Portal</div>
+          <h2>Admin Login</h2>
+
+          {error && <div className="error-message">{error}</div>}
+
           <form onSubmit={handleSubmit}>
             <div className="form-group">
-              <label>Username</label>
+              <label>Email</label>
               <input
                 type="email"
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="Enter your email"
+                placeholder="Enter admin email"
                 required
               />
             </div>
-
             <div className="form-group">
               <label>Password</label>
               <input
@@ -70,21 +70,14 @@ function RestaurantLogin() {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Enter your password"
+                placeholder="Enter password"
                 required
               />
             </div>
-
-            {error && <div className="error-message">{error}</div>}
-
             <button type="submit" className="submit-btn" disabled={loading}>
-              {loading ? 'Logging in...' : 'Login'}
+              {loading ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
-
-          <p className="auth-link">
-            Don't have an account? <Link to="/restaurant/register">Register here</Link>
-          </p>
         </div>
       </div>
 
@@ -93,15 +86,11 @@ function RestaurantLogin() {
           <div className="logo">HotStop</div>
           <div className="install-text">Install App</div>
         </div>
-        <div className="footer-center">
-          (c) 2025 Copyright, HotStop.com
-        </div>
-        <div className="footer-right">
-          About Us / Contact Us
-        </div>
+        <div className="footer-center">(c) 2025 Copyright, HotStop.com</div>
+        <div className="footer-right">About Us / Contact Us</div>
       </div>
     </div>
   );
 }
 
-export default RestaurantLogin;
+export default AdminLogin;

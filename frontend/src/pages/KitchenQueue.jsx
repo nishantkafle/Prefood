@@ -115,6 +115,9 @@ function KitchenQueue() {
 
   const handleDragEnd = () => {
     setDraggedOrder(null);
+
+
+    
   };
 
   const formatEstTime = (minutes) => {

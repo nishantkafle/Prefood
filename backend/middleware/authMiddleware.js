@@ -47,3 +47,11 @@ export const isUser = (req, res, next) => {
         return res.json({ success: false, message: 'User access required' });
     }
 };
+
+export const isAdmin = (req, res, next) => {
+    if (req.user && req.user.role === 'admin') {
+        next();
+    } else {
+        return res.json({ success: false, message: 'Admin access required' });
+    }
+};

@@ -20,6 +20,7 @@ const userSchema = new mongoose.Schema({
     serviceType: {type: String, default: ''},
     openingTime: {type: String, default: ''},
     closingTime: {type: String, default: ''},
+    isActive: {type: Boolean, default: true},
 })
 const userModel = mongoose.models.user || mongoose.model('user', userSchema);
 

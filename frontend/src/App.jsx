@@ -10,6 +10,8 @@ import RestaurantRegister from './pages/RestaurantRegister';
 import RestaurantDashboard from './pages/RestaurantDashboard';
 import OrderTracking from './pages/OrderTracking';
 import UserOrders from './pages/UserOrders';
+import AdminLogin from './pages/AdminLogin';
+import AdminDashboard from './pages/AdminDashboard';
 
 function RoleProtectedRoute({ allowedRole, children }) {
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -50,6 +52,7 @@ function RoleProtectedRoute({ allowedRole, children }) {
   }
 
   if (profileRole !== allowedRole) {
+    if (profileRole === 'admin') return <Navigate to="/admin/dashboard" replace />;
     return <Navigate to={profileRole === 'restaurant' ? '/restaurant/dashboard' : '/user/dashboard'} replace />;
   }
 
@@ -94,6 +97,15 @@ function App() {
           element={(
             <RoleProtectedRoute allowedRole="restaurant">
               <RestaurantDashboard />
+            </RoleProtectedRoute>
+          )}
+        />
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route
+          path="/admin/dashboard"
+          element={(
+            <RoleProtectedRoute allowedRole="admin">
+              <AdminDashboard />
             </RoleProtectedRoute>
           )}
         />

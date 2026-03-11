@@ -8,6 +8,7 @@ import connectDB from './config/mongodb.js'
 import authRouter from './routes/authRoutes.js'
 import menuRouter from './routes/menuRoutes.js'
 import orderRouter from './routes/orderRoutes.js'
+import chatRouter from './routes/chatRoutes.js'
 import { initSocket } from './utils/socket.js';
 
 const app = express();
@@ -32,6 +33,7 @@ app.get('/', (req, res)=> res.send("API Working fine "));
 app.use('/api/auth', authRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/orders', orderRouter);
+app.use('/api/chat', chatRouter);
 
 const startServer = async () => {
   await connectDB();
