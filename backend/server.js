@@ -9,6 +9,7 @@ import authRouter from './routes/authRoutes.js'
 import menuRouter from './routes/menuRoutes.js'
 import orderRouter from './routes/orderRoutes.js'
 import chatRouter from './routes/chatRoutes.js'
+import notificationRouter from './routes/notificationRoutes.js'
 import { initSocket } from './utils/socket.js';
 
 const app = express();
@@ -34,6 +35,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/menu', menuRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/chat', chatRouter);
+app.use('/api/notifications', notificationRouter);
 
 const startServer = async () => {
   await connectDB();

@@ -5,6 +5,7 @@ import OrderManagement from './OrderManagement';
 import KitchenHome from './KitchenHome';
 import KitchenQueue from './KitchenQueue';
 import RestaurantSettings from './RestaurantSettings';
+import NotificationBell from '../components/NotificationBell';
 import './Dashboard.css';
 
 function RestaurantDashboard() {
@@ -179,6 +180,7 @@ function RestaurantDashboard() {
           <div className="date-time">
             {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
           </div>
+          <NotificationBell />
           <button className="install-btn">Install App</button>
         </div>
       </div>
@@ -197,6 +199,9 @@ function RestaurantDashboard() {
             </div>
             <div className={`sidebar-item ${activeSection === 'orders' ? 'active' : ''}`} onClick={() => setActiveSection('orders')}>
               Orders Management
+            </div>
+            <div className="sidebar-item" onClick={() => navigate('/restaurant/messages')}>
+              Messages
             </div>
           </div>
 

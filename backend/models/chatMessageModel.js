@@ -5,7 +5,8 @@ const chatMessageSchema = new mongoose.Schema({
     receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true },
     senderRole: { type: String, enum: ['user', 'restaurant'], required: true },
     receiverRole: { type: String, enum: ['user', 'restaurant'], required: true },
-    message: { type: String, required: true, trim: true },
+    message: { type: String, default: '', trim: true },
+    image: { type: String, default: '' },
     conversationKey: { type: String, required: true, index: true }
 }, {
     timestamps: true

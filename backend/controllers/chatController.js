@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import chatMessageModel from '../models/chatMessageModel.js';
 import userModel from '../models/userModel.js';
 import { getIO } from '../utils/socket.js';
+import { createNotification } from '../utils/notifications.js';
 
 const ALLOWED_ROLES = ['user', 'restaurant'];
 
@@ -51,7 +52,7 @@ export const getConversations = async (req, res) => {
 
         const counterparts = await userModel
             .find({ _id: { $in: counterpartIds } })
-            .select('name role restaurantName logo location')
+            .select('name role restaurantName logo location phone')
             .lean();
 
         const counterpartMap = new Map(counterparts.map((user) => [String(user._id), user]));
@@ -72,9 +73,10 @@ export const getConversations = async (req, res) => {
                         role: otherUser.role,
                         restaurantName: otherUser.restaurantName,
                         logo: otherUser.logo,
-                        location: otherUser.location
+                        location: otherUser.location,
+                        phone: otherUser.phone
                     },
-                    lastMessage: message.message,
+                    lastMessage: message.message || (message.image ? 'Image' : ''),
                     lastMessageAt: message.createdAt,
                     lastMessageFromMe: String(message.senderId) === String(currentUser._id)
                 };
@@ -102,7 +104,7 @@ export const getMessagesWithUser = async (req, res) => {
 
         const otherUser = await userModel
             .findById(otherUserId)
-            .select('name role restaurantName logo location');
+            .select('name role restaurantName logo location phone');
 
         if (!otherUser) {
             return res.status(404).json({ success: false, message: 'User not found' });
@@ -136,15 +138,17 @@ export const sendMessageToUser = async (req, res) => {
     try {
         const sender = req.user;
         const { receiverId } = req.params;
-        const { message } = req.body;
+        const { message, image } = req.body;
 
         if (!isValidObjectId(receiverId)) {
             return res.status(400).json({ success: false, message: 'Invalid receiver id' });
         }
 
         const trimmedMessage = String(message || '').trim();
-        if (!trimmedMessage) {
-            return res.status(400).json({ success: false, message: 'Message cannot be empty' });
+        const normalizedImage = String(image || '').trim();
+
+        if (!trimmedMessage && !normalizedImage) {
+            return res.status(400).json({ success: false, message: 'Message or image is required' });
         }
 
         if (String(receiverId) === String(sender._id)) {
@@ -168,7 +172,19 @@ export const sendMessageToUser = async (req, res) => {
             senderRole: sender.role,
             receiverRole: receiver.role,
             message: trimmedMessage,
+            image: normalizedImage,
             conversationKey
+        });
+
+        await createNotification({
+            recipientId: receiverId,
+            type: 'message',
+            title: sender.role === 'restaurant' ? (sender.restaurantName || sender.name || 'Restaurant') : (sender.name || 'User'),
+            message: trimmedMessage || 'Sent you an image',
+            meta: {
+                route: receiver.role === 'restaurant' ? '/restaurant/messages' : `/user/chats?restaurantId=${sender._id}`,
+                chatUserId: String(sender._id)
+            }
         });
 
         const io = getIO();

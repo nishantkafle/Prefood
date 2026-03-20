@@ -2,6 +2,7 @@ import orderModel from '../models/orderModel.js';
 import menuModel from '../models/menuModel.js';
 import userModel from '../models/userModel.js';
 import { getIO } from '../utils/socket.js';
+import { createNotification } from '../utils/notifications.js';
 
 const VALID_STATUSES = ['pending', 'accepted', 'cooking', 'preparing', 'ready', 'completed', 'cancelled', 'delayed'];
 
@@ -131,6 +132,18 @@ export const createUserPreorder = async (req, res) => {
         });
 
         await order.save();
+
+        await createNotification({
+            recipientId: restaurantId,
+            type: 'order-created',
+            title: 'New order received',
+            message: `${customerName} placed order ${orderId}`,
+            meta: {
+                route: '/restaurant/dashboard',
+                orderId: String(order._id)
+            }
+        });
+
         const io = getIO();
         if (io) io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
         return res.json({ success: true, message: 'Preorder created successfully', data: order });
@@ -299,6 +312,20 @@ export const updateOrderStatus = async (req, res) => {
 
         order.status = normalizedStatus;
         await order.save();
+
+        if (order.customerId) {
+            await createNotification({
+                recipientId: order.customerId,
+                type: 'order-status',
+                title: 'Order status updated',
+                message: `Your order ${order.orderId} is now ${normalizedStatus}`,
+                meta: {
+                    route: `/order/track/${order._id}`,
+                    orderId: String(order._id)
+                }
+            });
+        }
+
         const io = getIO();
         if (io) io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
         return res.json({ success: true, message: 'Order status updated', data: order });

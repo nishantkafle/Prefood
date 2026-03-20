@@ -48,6 +48,8 @@ function UserRegister() {
       const response = await axios.post('http://localhost:4000/api/auth/register', {
         name: formData.name,
         email: formData.email,
+        location: formData.location,
+        phone: formData.phone,
         password: formData.password,
         role: 'user'
       }, { withCredentials: true });

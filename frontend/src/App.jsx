@@ -5,9 +5,12 @@ import RoleSelection from './pages/RoleSelection';
 import UserLogin from './pages/UserLogin';
 import UserRegister from './pages/UserRegister';
 import UserDashboard from './pages/UserDashboard';
+import UserChats from './pages/UserChats';
 import RestaurantLogin from './pages/RestaurantLogin';
 import RestaurantRegister from './pages/RestaurantRegister';
 import RestaurantDashboard from './pages/RestaurantDashboard';
+import RestaurantCustomerProfile from './pages/RestaurantCustomerProfile';
+import RestaurantMessages from './pages/RestaurantMessages';
 import OrderTracking from './pages/OrderTracking';
 import UserOrders from './pages/UserOrders';
 import AdminLogin from './pages/AdminLogin';
@@ -90,6 +93,14 @@ function App() {
             </RoleProtectedRoute>
           )}
         />
+        <Route
+          path="/user/chats"
+          element={(
+            <RoleProtectedRoute allowedRole="user">
+              <UserChats />
+            </RoleProtectedRoute>
+          )}
+        />
         <Route path="/restaurant/login" element={<RestaurantLogin />} />
         <Route path="/restaurant/register" element={<RestaurantRegister />} />
         <Route
@@ -97,6 +108,22 @@ function App() {
           element={(
             <RoleProtectedRoute allowedRole="restaurant">
               <RestaurantDashboard />
+            </RoleProtectedRoute>
+          )}
+        />
+        <Route
+          path="/restaurant/customer/:customerId"
+          element={(
+            <RoleProtectedRoute allowedRole="restaurant">
+              <RestaurantCustomerProfile />
+            </RoleProtectedRoute>
+          )}
+        />
+        <Route
+          path="/restaurant/messages"
+          element={(
+            <RoleProtectedRoute allowedRole="restaurant">
+              <RestaurantMessages />
             </RoleProtectedRoute>
           )}
         />

@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 
 function OrderManagement() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -396,6 +398,15 @@ function OrderManagement() {
                     <div className="customer-info">
                       <span className="customer-name">{order.customerName}</span>
                       {order.customerPhone && <span className="customer-phone">{order.customerPhone}</span>}
+                      {order.customerId && (
+                        <button
+                          type="button"
+                          className="action-btn accept"
+                          onClick={() => navigate(`/restaurant/customer/${order.customerId}`)}
+                        >
+                          Open Profile
+                        </button>
+                      )}
                     </div>
                   </td>
                   <td className="items-cell">

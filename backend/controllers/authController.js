@@ -34,7 +34,14 @@ export const register = async (req, res) => {
 
         // Create new user
         const hashedPassword = await bcrypt.hash(password, 10);
-        const userData = {name, email, password: hashedPassword, role};
+        const userData = {
+            name,
+            email,
+            password: hashedPassword,
+            role,
+            location: location || '',
+            phone: phone || ''
+        };
 
         // Add restaurant-specific fields if registering as restaurant
         if (role === 'restaurant') {

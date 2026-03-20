@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import NotificationBell from '../components/NotificationBell';
 import './Dashboard.css';
 
 function UserDashboard() {
@@ -169,6 +170,15 @@ function UserDashboard() {
     navigate('/user/orders');
   };
 
+  const handleOpenAllChats = () => {
+    navigate('/user/chats');
+  };
+
+  const handleChatWithRestaurant = () => {
+    if (!selectedRestaurant?._id) return;
+    navigate(`/user/chats?restaurantId=${selectedRestaurant._id}`);
+  };
+
   const filteredRestaurants = restaurants.filter(r => {
     const q = searchQuery.toLowerCase();
     return (r.restaurantName || '').toLowerCase().includes(q) ||
@@ -186,6 +196,8 @@ function UserDashboard() {
         <div className="header">
           <div className="logo">HotStop</div>
           <div className="header-right">
+              <NotificationBell />
+              <button className="install-btn" onClick={handleOpenAllChats}>All Chats</button>
             <button className="install-btn" onClick={handleTrackOrderStatus}>Track Order Status</button>
             <button className="logout-btn" onClick={handleLogout}>Logout</button>
           </div>
@@ -195,6 +207,7 @@ function UserDashboard() {
           {/* Hero Banner */}
           <div className="um-hero" style={selectedRestaurant.logo ? { backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(${selectedRestaurant.logo})` } : {}}>
             <button className="um-back-btn" onClick={handleBackToList}>Back</button>
+            <button className="um-back-btn" style={{ left: 'auto', right: '22px' }} onClick={handleChatWithRestaurant}>Chat</button>
             <div className="um-hero-content">
               <h1>{selectedRestaurant.restaurantName || 'Restaurant'}</h1>
               <div className="um-hero-meta">
@@ -387,6 +400,8 @@ function UserDashboard() {
       <div className="header">
         <div className="logo">HotStop</div>
         <div className="header-right">
+          <NotificationBell />
+          <button className="install-btn" onClick={handleOpenAllChats}>All Chats</button>
           <button className="install-btn" onClick={handleTrackOrderStatus}>Track Order Status</button>
           <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </div>

@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import './Dashboard.css';
 import './OrderTracking.css';
 import SmallBackButton from '../components/SmallBackButton';
+import NotificationBell from '../components/NotificationBell';
 
 const FALLBACK_STAGES = ['Order Created', 'Order Accepted', 'Cooking', 'Ready'];
 const TIMER_RUNNING_STATUSES = ['accepted', 'cooking', 'preparing', 'delayed'];
@@ -142,7 +143,7 @@ export default function OrderTracking() {
       <div className="dashboard-container">
         <div className="header">
           <div className="logo">HotStop</div>
-          <div className="header-right"></div>
+          <div className="header-right"><NotificationBell /></div>
         </div>
         <div className="dashboard-content">
           <SmallBackButton to="/user/orders" />
@@ -157,7 +158,7 @@ export default function OrderTracking() {
       <div className="dashboard-container">
         <div className="header">
           <div className="logo">HotStop</div>
-          <div className="header-right"></div>
+          <div className="header-right"><NotificationBell /></div>
         </div>
         <div className="dashboard-content">
           <SmallBackButton to="/user/orders" />
@@ -174,7 +175,7 @@ export default function OrderTracking() {
     <div className="dashboard-container">
       <div className="header">
         <div className="logo">HotStop</div>
-        <div className="header-right"></div>
+        <div className="header-right"><NotificationBell /></div>
       </div>
 
       <div className="dashboard-content">

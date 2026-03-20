@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Dashboard.css';
 import SmallBackButton from '../components/SmallBackButton';
+import NotificationBell from '../components/NotificationBell';
 
 const TIMER_RUNNING_STATUSES = ['accepted', 'cooking', 'preparing', 'delayed'];
 const FOOD_READY_STATUSES = ['ready', 'completed'];
@@ -79,7 +80,7 @@ function UserOrders() {
     <div className="dashboard-container">
       <div className="header">
         <div className="logo">HotStop</div>
-        <div className="header-right"></div>
+        <div className="header-right"><NotificationBell /></div>
       </div>
 
       <div className="dashboard-content">
