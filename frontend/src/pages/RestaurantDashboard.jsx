@@ -206,9 +206,12 @@ function RestaurantDashboard() {
           </div>
 
           <div className="sidebar-bottom">
-            <div className={`sidebar-item ${activeSection === 'settings' ? 'active' : ''}`} onClick={() => setActiveSection('settings')}>
+            <button 
+              className={`sidebar-settings-btn ${activeSection === 'settings' ? 'active' : ''}`} 
+              onClick={() => setActiveSection('settings')}
+            >
               Settings
-            </div>
+            </button>
             <button className="sidebar-logout-btn" onClick={handleLogout}>Logout</button>
           </div>
         </div>

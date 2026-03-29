@@ -10,12 +10,14 @@ import menuRouter from './routes/menuRoutes.js'
 import orderRouter from './routes/orderRoutes.js'
 import chatRouter from './routes/chatRoutes.js'
 import notificationRouter from './routes/notificationRoutes.js'
+import esewaRouter from './routes/esewaRoutes.js'
 import { initSocket } from './utils/socket.js';
 
 const app = express();
 const port = process.env.PORT || 4000
 
 app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors({
   origin: function(origin, callback) {
@@ -36,6 +38,7 @@ app.use('/api/menu', menuRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/chat', chatRouter);
 app.use('/api/notifications', notificationRouter);
+app.use('/api/esewa', esewaRouter);
 
 const startServer = async () => {
   await connectDB();

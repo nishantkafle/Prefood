@@ -172,26 +172,8 @@ function KitchenQueue() {
     return activeOrders;
   };
 
-  const maxCapacity = 20;
-  const kitchenLoad = Math.min(Math.round((activeOrders.length / maxCapacity) * 100), 100);
-  const avgPrepTime = activeOrders.length > 0
-    ? Math.round(activeOrders.reduce((sum, o) => sum + (o.estimatedTime || 15), 0) / activeOrders.length)
-    : 0;
   const priorityCount = activeOrders.filter(o => isPriority(o)).length;
   const lateCount = activeOrders.filter(o => isLate(o)).length;
-  const doneCount = orders.filter(o => o.status === 'ready' || o.status === 'completed').length;
-
-  const getLoadLabel = () => {
-    if (kitchenLoad >= 80) return 'Busy';
-    if (kitchenLoad >= 50) return 'Moderate';
-    return 'Light';
-  };
-
-  const getLoadColor = () => {
-    if (kitchenLoad >= 80) return '#e53935';
-    if (kitchenLoad >= 50) return '#ff9800';
-    return '#4caf50';
-  };
 
   const handlePause = () => {
     setPaused(true);
@@ -378,34 +360,6 @@ function KitchenQueue() {
         </div>
 
         <div className="kq-sidebar">
-          <div className="kq-metric-card">
-            <div className="kq-metric-header">
-              <span className="kq-metric-title">Kitchen Load</span>
-              <span className="kq-load-label" style={{ color: getLoadColor() }}>{getLoadLabel()}</span>
-            </div>
-            <div className="kq-load-percent" style={{ color: getLoadColor() }}>{kitchenLoad}%</div>
-            <div className="kq-load-sublabel">Capacity</div>
-            <div className="kq-load-bar-bg">
-              <div className="kq-load-bar" style={{ width: `${kitchenLoad}%`, background: getLoadColor() }}></div>
-            </div>
-            <div className="kq-load-wait">Est. Wait Time: <strong>{avgPrepTime > 0 ? `${avgPrepTime}-${avgPrepTime + 5} mins` : '0 mins'}</strong></div>
-
-            <div className="kq-metric-counts">
-              <div className="kq-metric-count-item">
-                <div className="kq-metric-count-val">{pendingOrders.length}</div>
-                <div className="kq-metric-count-label">PENDING</div>
-              </div>
-              <div className="kq-metric-count-item">
-                <div className="kq-metric-count-val" style={{ color: '#ff6600' }}>{cookingOrders.length}</div>
-                <div className="kq-metric-count-label">COOKING</div>
-              </div>
-              <div className="kq-metric-count-item">
-                <div className="kq-metric-count-val" style={{ color: '#4caf50' }}>{doneCount}</div>
-                <div className="kq-metric-count-label">DONE</div>
-              </div>
-            </div>
-          </div>
-
           <div className="kq-metric-card">
             <div className="kq-metric-title">Emergency Controls</div>
             <div className="kq-emergency-btns">

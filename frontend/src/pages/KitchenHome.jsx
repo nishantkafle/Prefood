@@ -60,9 +60,6 @@ function KitchenHome() {
   const selectedInKitchen = selectedOrders.filter(order => ['pending', 'preparing'].includes(order.status)).length;
   const selectedEarnings = selectedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
 
-  const kitchenLoad = Math.min(Math.round((selectedInKitchen / 20) * 100), 100);
-  const loadLabel = kitchenLoad >= 80 ? 'High Load' : kitchenLoad >= 50 ? 'Medium Load' : 'Low Load';
-
   const recentOrders = [...selectedOrders]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
     .slice(0, 8);
@@ -127,42 +124,40 @@ function KitchenHome() {
         </div>
       </div>
 
-      <div className="kh-split-grid">
-        <div className="kh-panel">
-          <div className="kh-panel-head">
-            <h3>Selected Date Analytics</h3>
-            <span>{selectedDate}</span>
-          </div>
-          <div className="kh-selected-grid">
-            <div className="kh-mini-stat">
+      <div className="kh-panel">
+        <div className="kh-panel-head">
+          <h3>Selected Date Analytics</h3>
+          <span>{selectedDate}</span>
+        </div>
+        <div className="kh-selected-grid-full">
+          <div className="kh-mini-stat">
+            <div className="kh-mini-icon">✅</div>
+            <div>
               <div className="kh-mini-label">Completed</div>
               <div className="kh-mini-value">{selectedCompleted}</div>
             </div>
-            <div className="kh-mini-stat">
+          </div>
+          <div className="kh-mini-stat">
+            <div className="kh-mini-icon">⏳</div>
+            <div>
               <div className="kh-mini-label">Pending</div>
               <div className="kh-mini-value">{selectedPending}</div>
             </div>
-            <div className="kh-mini-stat">
+          </div>
+          <div className="kh-mini-stat">
+            <div className="kh-mini-icon">🔥</div>
+            <div>
               <div className="kh-mini-label">In Kitchen</div>
               <div className="kh-mini-value">{selectedInKitchen}</div>
             </div>
-            <div className="kh-mini-stat">
+          </div>
+          <div className="kh-mini-stat">
+            <div className="kh-mini-icon">💰</div>
+            <div>
               <div className="kh-mini-label">Earnings</div>
               <div className="kh-mini-value">NPR {selectedEarnings.toFixed(2)}</div>
             </div>
           </div>
-        </div>
-
-        <div className="kh-panel kh-load-panel">
-          <div className="kh-panel-head">
-            <h3>Kitchen Load</h3>
-            <span>{loadLabel}</span>
-          </div>
-          <div className="kh-load-value">{kitchenLoad}%</div>
-          <div className="kh-load-bar">
-            <div className="kh-load-bar-fill" style={{ width: `${kitchenLoad}%` }} />
-          </div>
-          <p>Calculated from selected date pending and preparing orders.</p>
         </div>
       </div>
 

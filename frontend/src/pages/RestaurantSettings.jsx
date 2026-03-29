@@ -18,6 +18,17 @@ function RestaurantSettings({ profile, onUpdate }) {
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
+  const [toastMessage, setToastMessage] = useState('');
+  const [toastType, setToastType] = useState('success');
+
+  const showToast = (msg, type = 'success') => {
+    setToastMessage(msg);
+    setToastType(type);
+    setTimeout(() => {
+      setToastMessage('');
+    }, 3000);
+  };
+
   useEffect(() => {
     if (profile) {
       setFormData({
@@ -68,13 +79,13 @@ function RestaurantSettings({ profile, onUpdate }) {
       }, { withCredentials: true });
 
       if (response.data.success) {
-        setMessage('Settings updated successfully!');
+        showToast('Settings updated successfully!', 'success');
         if (onUpdate) onUpdate();
       } else {
-        setError(response.data.message || 'Failed to update settings');
+        showToast(response.data.message || 'Failed to update settings', 'error');
       }
     } catch (err) {
-      setError(err.response?.data?.message || 'Something went wrong');
+      showToast(err.response?.data?.message || 'Something went wrong', 'error');
     } finally {
       setLoading(false);
     }
@@ -198,13 +209,20 @@ function RestaurantSettings({ profile, onUpdate }) {
           {message && <div className="success-message">{message}</div>}
           {error && <div className="error-message">{error}</div>}
 
-          <div className="form-actions">
-            <button type="submit" className="submit-btn" disabled={loading}>
+          <div className="form-actions settings-actions">
+            <button type="submit" className="settings-submit-btn" disabled={loading}>
               {loading ? 'Saving...' : 'Save Settings'}
             </button>
           </div>
         </form>
       </div>
+
+      {toastMessage && (
+        <div className={`settings-toast ${toastType}`}>
+          {toastType === 'success' ? '✓ ' : '⚠️ '}
+          {toastMessage}
+        </div>
+      )}
     </>
   );
 }

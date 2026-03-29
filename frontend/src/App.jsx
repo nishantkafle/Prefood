@@ -15,6 +15,7 @@ import OrderTracking from './pages/OrderTracking';
 import UserOrders from './pages/UserOrders';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
+import PaymentStatus from './pages/PaymentStatus';
 
 function RoleProtectedRoute({ allowedRole, children }) {
   const [checkingAuth, setCheckingAuth] = useState(true);
@@ -69,6 +70,14 @@ function App() {
         <Route path="/" element={<RoleSelection />} />
         <Route path="/user/login" element={<UserLogin />} />
         <Route path="/user/register" element={<UserRegister />} />
+        <Route
+          path="/payment-success"
+          element={(
+            <RoleProtectedRoute allowedRole="user">
+              <PaymentStatus />
+            </RoleProtectedRoute>
+          )}
+        />
         <Route
           path="/user/dashboard"
           element={(

@@ -8,10 +8,12 @@ function NotificationBell() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState(null);
   const [notifications, setNotifications] = useState([]);
+  const [popupNotifications, setPopupNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const socketRef = useRef(null);
   const wrapRef = useRef(null);
+  const popupTimeoutsRef = useRef({});
 
   const loadNotifications = async () => {
     const res = await axios.get('http://localhost:4000/api/notifications', { withCredentials: true });
@@ -45,6 +47,7 @@ function NotificationBell() {
     socketRef.current.on('notification:new', (notification) => {
       setNotifications((prev) => [notification, ...prev].slice(0, 30));
       setUnreadCount((prev) => prev + 1);
+      setPopupNotifications((prev) => [notification, ...prev].slice(0, 4));
     });
 
     return () => {
@@ -54,6 +57,24 @@ function NotificationBell() {
       socketRef.current?.disconnect();
     };
   }, [profile]);
+
+  useEffect(() => {
+    popupNotifications.forEach((notification) => {
+      if (popupTimeoutsRef.current[notification._id]) return;
+
+      popupTimeoutsRef.current[notification._id] = setTimeout(() => {
+        setPopupNotifications((prev) => prev.filter((item) => item._id !== notification._id));
+        delete popupTimeoutsRef.current[notification._id];
+      }, 4500);
+    });
+  }, [popupNotifications]);
+
+  useEffect(() => {
+    return () => {
+      Object.values(popupTimeoutsRef.current).forEach((timeoutId) => clearTimeout(timeoutId));
+      popupTimeoutsRef.current = {};
+    };
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -73,6 +94,12 @@ function NotificationBell() {
       setUnreadCount((prev) => Math.max(0, prev - 1));
     }
 
+    if (popupTimeoutsRef.current[notification._id]) {
+      clearTimeout(popupTimeoutsRef.current[notification._id]);
+      delete popupTimeoutsRef.current[notification._id];
+    }
+    setPopupNotifications((prev) => prev.filter((item) => item._id !== notification._id));
+
     setOpen(false);
     if (notification?.meta?.route) {
       navigate(notification.meta.route);
@@ -83,10 +110,29 @@ function NotificationBell() {
     await axios.patch('http://localhost:4000/api/notifications/read-all', {}, { withCredentials: true });
     setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
     setUnreadCount(0);
+    Object.values(popupTimeoutsRef.current).forEach((timeoutId) => clearTimeout(timeoutId));
+    popupTimeoutsRef.current = {};
+    setPopupNotifications([]);
   };
 
   return (
     <div className="notification-wrap" ref={wrapRef}>
+      {popupNotifications.length > 0 && (
+        <div className="notification-toast-stack">
+          {popupNotifications.map((notification) => (
+            <button
+              type="button"
+              key={`toast-${notification._id}`}
+              className="notification-toast"
+              onClick={() => handleOpenNotification(notification)}
+            >
+              <div className="notification-toast-title">{notification.title}</div>
+              <div className="notification-toast-message">{notification.message}</div>
+            </button>
+          ))}
+        </div>
+      )}
+
       <button type="button" className="notification-btn" onClick={() => setOpen((prev) => !prev)}>
         Notifications
         {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}

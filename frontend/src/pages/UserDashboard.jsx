@@ -16,6 +16,9 @@ function UserDashboard() {
   const [cart, setCart] = useState([]);
   const [viewMode, setViewMode] = useState('grid');
   const [orderSuccess, setOrderSuccess] = useState(false);
+  const [dineInAt, setDineInAt] = useState('');
+  const [orderError, setOrderError] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('esewa');
 
   useEffect(() => {
     fetchRestaurants();
@@ -39,6 +42,9 @@ function UserDashboard() {
     setSelectedRestaurant(restaurant);
     setMenuLoading(true);
     setCart([]);
+    setDineInAt('');
+    setOrderError('');
+    setPaymentMethod('esewa');
     setActiveFilters(['all']);
     setOrderSuccess(false);
     try {
@@ -57,6 +63,9 @@ function UserDashboard() {
     setSelectedRestaurant(null);
     setMenuItems([]);
     setCart([]);
+    setDineInAt('');
+    setOrderError('');
+    setPaymentMethod('esewa');
     setActiveFilters(['all']);
     setOrderSuccess(false);
   };
@@ -144,25 +153,92 @@ function UserDashboard() {
 
   const clearCart = () => {
     setCart([]);
+    setOrderError('');
+  };
+
+  const submitEsewaForm = (checkoutUrl, payload) => {
+    const esewaActionUrl = checkoutUrl || 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+    const requiredEsewaFields = [
+      'amount',
+      'tax_amount',
+      'total_amount',
+      'transaction_uuid',
+      'product_code',
+      'product_service_charge',
+      'product_delivery_charge',
+      'success_url',
+      'failure_url',
+      'signed_field_names',
+      'signature'
+    ];
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = esewaActionUrl;
+    form.style.display = 'none';
+
+    requiredEsewaFields.forEach((key) => {
+      const value = payload?.[key];
+      if (value === undefined || value === null) return;
+      const input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = key;
+      input.value = String(value);
+      form.appendChild(input);
+    });
+
+    document.body.appendChild(form);
+    form.submit();
   };
 
   const handlePlacePreOrder = async () => {
     if (cart.length === 0 || !selectedRestaurant?._id) return;
-    try {
-      const response = await axios.post('http://localhost:4000/api/orders/preorder', {
-        restaurantId: selectedRestaurant._id,
-        items: cart.map(i => ({ menuItem: i._id, quantity: i.quantity }))
-      }, { withCredentials: true });
 
-      if (response.data.success) {
-        setOrderSuccess(true);
-        setCart([]);
-        setTimeout(() => setOrderSuccess(false), 3000);
+    if (!dineInAt) {
+      setOrderError('Please select your dine-in arrival time before placing order.');
+      return;
+    }
+
+    if (new Date(dineInAt).getTime() < Date.now()) {
+      setOrderError('Dine-in arrival time cannot be in the past.');
+      return;
+    }
+
+    setOrderError('');
+
+    try {
+      if (paymentMethod === 'esewa') {
+        const response = await axios.post('http://localhost:4000/api/esewa/initiate', {
+          restaurantId: selectedRestaurant._id,
+          dineInAt,
+          items: cart.map(i => ({ menuItem: i._id, quantity: i.quantity }))
+        }, { withCredentials: true });
+
+        if (response.data?.success && response.data?.checkoutUrl && response.data?.payload) {
+          submitEsewaForm(response.data.checkoutUrl, response.data.payload);
+          return;
+        }
+
+        setOrderError(response.data.message || 'Failed to place preorder');
       } else {
-        alert(response.data.message || 'Failed to place preorder');
+        const response = await axios.post('http://localhost:4000/api/orders/preorder', {
+          restaurantId: selectedRestaurant._id,
+          dineInAt,
+          items: cart.map(i => ({ menuItem: i._id, quantity: i.quantity }))
+        }, { withCredentials: true });
+
+        if (response.data?.success) {
+          setOrderSuccess(true);
+          setCart([]);
+          setDineInAt('');
+          setTimeout(() => setOrderSuccess(false), 3000);
+          return;
+        }
+
+        setOrderError(response.data?.message || 'Failed to place preorder');
       }
     } catch (err) {
-      alert(err.response?.data?.message || 'Failed to place preorder');
+      setOrderError(err.response?.data?.message || 'Failed to place preorder');
     }
   };
 
@@ -339,6 +415,10 @@ function UserDashboard() {
                 <div className="um-order-success">Pre-order placed successfully!</div>
               )}
 
+              {orderError && (
+                <div className="um-order-error">{orderError}</div>
+              )}
+
               {cart.length === 0 && !orderSuccess ? (
                 <div className="um-cart-empty">
                   <p>Your cart is empty</p>
@@ -381,8 +461,42 @@ function UserDashboard() {
                       <span>Total</span>
                       <span className="um-cart-total-amount">NPR {getCartTotal()}</span>
                     </div>
+                    <div className="um-dinein-time-wrap">
+                      <label htmlFor="dineInAt" className="um-dinein-time-label">What time are you coming for dine-in?</label>
+                      <input
+                        id="dineInAt"
+                        type="datetime-local"
+                        className="um-dinein-time-input"
+                        value={dineInAt}
+                        min={new Date().toISOString().slice(0, 16)}
+                        onChange={(e) => setDineInAt(e.target.value)}
+                      />
+                    </div>
+                    <div className="um-payment-method-wrap">
+                      <div className="um-payment-method-label">Payment Method</div>
+                      <label className="um-payment-option">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="esewa"
+                          checked={paymentMethod === 'esewa'}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                        />
+                        <span>eSewa</span>
+                      </label>
+                      <label className="um-payment-option">
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          value="cash"
+                          checked={paymentMethod === 'cash'}
+                          onChange={(e) => setPaymentMethod(e.target.value)}
+                        />
+                        <span>Pay at Restaurant (Cash)</span>
+                      </label>
+                    </div>
                     <button className="um-preorder-btn" onClick={handlePlacePreOrder} disabled={cart.length === 0}>
-                      Place Dine-In Pre-Order
+                      {paymentMethod === 'esewa' ? 'Pay with eSewa & Place Pre-Order' : 'Place Dine-In Pre-Order'}
                     </button>
                   </div>
                 </>

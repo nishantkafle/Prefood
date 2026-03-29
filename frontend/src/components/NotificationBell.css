@@ -2,6 +2,42 @@
   position: relative;
 }
 
+.notification-toast-stack {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  width: min(360px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1000;
+}
+
+.notification-toast {
+  width: 100%;
+  text-align: left;
+  border: none;
+  border-left: 4px solid #ff6600;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  padding: 12px 14px;
+  cursor: pointer;
+  animation: notificationToastIn 0.2s ease-out;
+}
+
+.notification-toast-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #222;
+}
+
+.notification-toast-message {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #555;
+}
+
 .notification-btn {
   position: relative;
   border: none;
@@ -89,4 +125,15 @@
 
 .notification-empty {
   padding: 14px;
+}
+
+@keyframes notificationToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

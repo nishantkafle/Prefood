@@ -13,9 +13,13 @@ const orderSchema = new mongoose.Schema({
     customerId: { type: mongoose.Schema.Types.ObjectId, ref: 'user' },
     customerName: { type: String, required: true },
     customerPhone: { type: String, default: '' },
+    dineInAt: { type: Date, default: null },
     items: [orderItemSchema],
     totalAmount: { type: Number, required: true },
     estimatedTime: { type: Number, required: true }, // in minutes
+    paymentMethod: { type: String, enum: ['cash', 'esewa'], default: 'cash' },
+    paymentStatus: { type: String, enum: ['pending', 'completed', 'failed'], default: 'completed' },
+    paymentTransactionUuid: { type: String, default: '' },
     acceptedAt: { type: Date, default: null },
     status: {
         type: String,

@@ -1,0 +1,312 @@
+import crypto from 'crypto';
+import { randomUUID } from 'crypto';
+import menuModel from '../models/menuModel.js';
+import orderModel from '../models/orderModel.js';
+import esewaTransactionModel from '../models/esewaTransactionModel.js';
+
+const ESEWA_SECRET_KEY = process.env.ESEWA_SECRET_KEY || '8gBm/:&EnhH.1/q';
+const ESEWA_PRODUCT_CODE = process.env.ESEWA_PRODUCT_CODE || 'EPAYTEST';
+const ESEWA_CHECKOUT_URL = process.env.ESEWA_CHECKOUT_URL || 'https://rc-epay.esewa.com.np/api/epay/main/v2/form';
+const ESEWA_VERIFY_STATUS_URL = process.env.ESEWA_VERIFY_STATUS_URL || '';
+const BACKEND_BASE_URL = process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 4000}`;
+const FRONTEND_BASE_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
+
+const SIGNED_FIELD_NAMES = 'total_amount,transaction_uuid,product_code';
+
+const buildSignature = (totalAmount, transactionUuid, productCode) => {
+  const signingString = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${productCode}`;
+  return crypto.createHmac('sha256', ESEWA_SECRET_KEY).update(signingString).digest('base64');
+};
+
+const generateOrderId = async (restaurantId) => {
+  const count = await orderModel.countDocuments({ restaurantId });
+  return `ORD-${String(count + 1).padStart(4, '0')}`;
+};
+
+const updateFailedTransaction = async (transactionUuid, gatewayResponse = null) => {
+  if (!transactionUuid) return;
+
+  const transaction = await esewaTransactionModel.findOne({ transactionUuid });
+  if (!transaction) return;
+
+  transaction.status = 'failed';
+  transaction.gatewayResponse = gatewayResponse;
+  await transaction.save();
+
+  await orderModel.findByIdAndUpdate(transaction.orderId, {
+    paymentStatus: 'failed',
+    status: 'cancelled'
+  });
+};
+
+const extractTransactionUuidFromFailureQuery = (query) => {
+  if (query?.transaction_uuid) return query.transaction_uuid;
+  if (!query?.data) return '';
+
+  try {
+    const decodedString = Buffer.from(query.data, 'base64').toString('utf-8');
+    const decodedData = JSON.parse(decodedString);
+    return decodedData?.transaction_uuid || '';
+  } catch (error) {
+    return '';
+  }
+};
+
+const parseEsewaEncodedPayload = (encodedData) => {
+  if (!encodedData) return null;
+
+  try {
+    const decodedString = Buffer.from(encodedData, 'base64').toString('utf-8');
+    return JSON.parse(decodedString);
+  } catch (error) {
+    return null;
+  }
+};
+
+const verifyEsewaTransactionIfEnabled = async (decodedData) => {
+  if (!ESEWA_VERIFY_STATUS_URL) {
+    return { verified: true, skipped: true };
+  }
+
+  const params = new URLSearchParams({
+    product_code: decodedData?.product_code || '',
+    total_amount: String(decodedData?.total_amount || ''),
+    transaction_uuid: decodedData?.transaction_uuid || ''
+  });
+
+  if (decodedData?.transaction_code) {
+    params.set('transaction_code', decodedData.transaction_code);
+  }
+
+  try {
+    const response = await fetch(`${ESEWA_VERIFY_STATUS_URL}?${params.toString()}`);
+    if (!response.ok) {
+      return { verified: false, skipped: false };
+    }
+
+    const verificationData = await response.json();
+    const status = String(verificationData?.status || '').toUpperCase();
+    return { verified: status === 'COMPLETE' || status === 'SUCCESS', skipped: false };
+  } catch (error) {
+    return { verified: false, skipped: false };
+  }
+};
+
+const completeTransactionByDecodedData = async (decodedData) => {
+  const transactionUuid = decodedData?.transaction_uuid;
+  if (!transactionUuid) {
+    return { ok: false, reason: 'transaction_not_found' };
+  }
+
+  if (decodedData?.status !== 'COMPLETE') {
+    await updateFailedTransaction(transactionUuid, decodedData);
+    return { ok: false, reason: 'not_complete' };
+  }
+
+  const transaction = await esewaTransactionModel.findOne({ transactionUuid });
+  if (!transaction) {
+    return { ok: false, reason: 'transaction_not_found' };
+  }
+
+  const callbackTotalAmount = Number(decodedData?.total_amount);
+  if (!Number.isFinite(callbackTotalAmount) || Number(transaction.amount) !== callbackTotalAmount) {
+    await updateFailedTransaction(transactionUuid, decodedData);
+    return { ok: false, reason: 'amount_mismatch' };
+  }
+
+  if (decodedData?.product_code !== transaction.productCode) {
+    await updateFailedTransaction(transactionUuid, decodedData);
+    return { ok: false, reason: 'product_mismatch' };
+  }
+
+  const verificationResult = await verifyEsewaTransactionIfEnabled(decodedData);
+  if (!verificationResult.verified) {
+    await updateFailedTransaction(transactionUuid, decodedData);
+    return { ok: false, reason: 'verification_failed' };
+  }
+
+  if (transaction.status !== 'completed') {
+    transaction.status = 'completed';
+    transaction.gatewayResponse = decodedData;
+    await transaction.save();
+
+    await orderModel.findByIdAndUpdate(transaction.orderId, {
+      paymentStatus: 'completed',
+      paymentTransactionUuid: transactionUuid
+    });
+  }
+
+  return {
+    ok: true,
+    reason: 'success',
+    transactionUuid,
+    orderId: String(transaction.orderId)
+  };
+};
+
+export const initiateEsewaPayment = async (req, res) => {
+  try {
+    const { restaurantId, customerPhone, items, dineInAt } = req.body;
+
+    if (!restaurantId) {
+      return res.status(400).json({ success: false, message: 'Restaurant is required' });
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'At least one item is required' });
+    }
+
+    if (!dineInAt) {
+      return res.status(400).json({ success: false, message: 'Please select your dine-in arrival time' });
+    }
+
+    const parsedDineInAt = new Date(dineInAt);
+    if (Number.isNaN(parsedDineInAt.getTime())) {
+      return res.status(400).json({ success: false, message: 'Invalid dine-in arrival time' });
+    }
+
+    if (parsedDineInAt.getTime() < Date.now()) {
+      return res.status(400).json({ success: false, message: 'Dine-in arrival time cannot be in the past' });
+    }
+
+    const customerName = req.user?.name || 'Customer';
+
+    const menuItemIds = items.map((item) => item.menuItem);
+    const menuItems = await menuModel.find({ _id: { $in: menuItemIds }, restaurantId });
+
+    if (menuItems.length !== menuItemIds.length) {
+      return res.status(400).json({ success: false, message: 'One or more menu items not found' });
+    }
+
+    const menuMap = {};
+    menuItems.forEach((menu) => {
+      menuMap[menu._id.toString()] = menu;
+    });
+
+    let totalAmount = 0;
+    let maxPrepTime = 0;
+
+    const orderItems = items.map((item) => {
+      const menu = menuMap[item.menuItem];
+      const quantity = parseInt(item.quantity, 10) || 1;
+      const itemTotal = menu.price * quantity;
+      totalAmount += itemTotal;
+      if (menu.prepTime > maxPrepTime) maxPrepTime = menu.prepTime;
+
+      return {
+        menuItem: menu._id,
+        name: menu.name,
+        quantity,
+        price: menu.price,
+        prepTime: menu.prepTime
+      };
+    });
+
+    const orderId = await generateOrderId(restaurantId);
+
+    const order = await orderModel.create({
+      orderId,
+      customerId: req.user?._id,
+      customerName,
+      customerPhone: customerPhone || '',
+      dineInAt: parsedDineInAt,
+      items: orderItems,
+      totalAmount,
+      estimatedTime: maxPrepTime,
+      restaurantId,
+      paymentMethod: 'esewa',
+      paymentStatus: 'pending'
+    });
+
+    const transactionUuid = randomUUID();
+    const formattedTotalAmount = Number(totalAmount).toFixed(2);
+    const signature = buildSignature(formattedTotalAmount, transactionUuid, ESEWA_PRODUCT_CODE);
+
+    await esewaTransactionModel.create({
+      transactionUuid,
+      orderId: order._id,
+      userId: req.user._id,
+      amount: Number(formattedTotalAmount),
+      productCode: ESEWA_PRODUCT_CODE,
+      status: 'pending'
+    });
+
+    const payload = {
+      amount: formattedTotalAmount,
+      tax_amount: '0',
+      total_amount: formattedTotalAmount,
+      transaction_uuid: transactionUuid,
+      product_code: ESEWA_PRODUCT_CODE,
+      product_service_charge: '0',
+      product_delivery_charge: '0',
+      success_url: `${BACKEND_BASE_URL}/api/esewa/success`,
+      failure_url: `${BACKEND_BASE_URL}/api/esewa/failure`,
+      signed_field_names: SIGNED_FIELD_NAMES,
+      signature
+    };
+
+    return res.json({
+      success: true,
+      checkoutUrl: ESEWA_CHECKOUT_URL,
+      payload,
+      orderId: order._id,
+      transaction_uuid: transactionUuid
+    });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+export const handleEsewaSuccess = async (req, res) => {
+  try {
+    const encodedData = req.query.data;
+
+    if (!encodedData) {
+      return res.redirect(`${FRONTEND_BASE_URL}/payment-success?status=failure&reason=missing_data`);
+    }
+
+    const decodedData = parseEsewaEncodedPayload(encodedData);
+    if (!decodedData) {
+      return res.redirect(`${FRONTEND_BASE_URL}/payment-success?status=failure&reason=invalid_data`);
+    }
+
+    const completionResult = await completeTransactionByDecodedData(decodedData);
+    if (!completionResult.ok) {
+      return res.redirect(`${FRONTEND_BASE_URL}/payment-success?status=failure&reason=${completionResult.reason}`);
+    }
+
+    return res.redirect(`${FRONTEND_BASE_URL}/payment-success?status=success&orderId=${completionResult.orderId}&transaction_uuid=${completionResult.transactionUuid}`);
+  } catch (error) {
+    return res.redirect(`${FRONTEND_BASE_URL}/payment-success?status=failure&reason=server_error`);
+  }
+};
+
+export const handleEsewaFailure = async (req, res) => {
+  try {
+    const transactionUuid = extractTransactionUuidFromFailureQuery(req.query);
+    await updateFailedTransaction(transactionUuid, req.query);
+    return res.redirect(`${FRONTEND_BASE_URL}/payment-success?status=failure`);
+  } catch (error) {
+    return res.redirect(`${FRONTEND_BASE_URL}/payment-success?status=failure&reason=server_error`);
+  }
+};
+
+export const handleEsewaIPN = async (req, res) => {
+  try {
+    const encodedData = req.body?.data || req.query?.data || '';
+    const decodedData = parseEsewaEncodedPayload(encodedData);
+
+    if (!decodedData) {
+      return res.status(400).json({ success: false, message: 'Invalid IPN payload' });
+    }
+
+    const completionResult = await completeTransactionByDecodedData(decodedData);
+    if (!completionResult.ok) {
+      return res.status(400).json({ success: false, message: completionResult.reason });
+    }
+
+    return res.json({ success: true, message: 'IPN processed successfully' });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: 'IPN processing failed' });
+  }
+};

@@ -77,7 +77,7 @@ const generateOrderId = async (restaurantId) => {
 // Create preorder from a user (for a specific restaurant)
 export const createUserPreorder = async (req, res) => {
     try {
-        const { restaurantId, customerPhone, items } = req.body;
+        const { restaurantId, customerPhone, items, dineInAt } = req.body;
 
         if (!restaurantId) {
             return res.json({ success: false, message: 'Restaurant is required' });
@@ -85,6 +85,19 @@ export const createUserPreorder = async (req, res) => {
 
         if (!items || items.length === 0) {
             return res.json({ success: false, message: 'At least one item is required' });
+        }
+
+        if (!dineInAt) {
+            return res.status(400).json({ success: false, message: 'Please select your dine-in arrival time' });
+        }
+
+        const parsedDineInAt = new Date(dineInAt);
+        if (Number.isNaN(parsedDineInAt.getTime())) {
+            return res.status(400).json({ success: false, message: 'Invalid dine-in arrival time' });
+        }
+
+        if (parsedDineInAt.getTime() < Date.now()) {
+            return res.status(400).json({ success: false, message: 'Dine-in arrival time cannot be in the past' });
         }
 
         const customerName = req.user?.name || 'Customer';
@@ -125,10 +138,13 @@ export const createUserPreorder = async (req, res) => {
             customerId: req.user?._id,
             customerName,
             customerPhone: customerPhone || '',
+            dineInAt: parsedDineInAt,
             items: orderItems,
             totalAmount,
             estimatedTime: maxPrepTime,
-            restaurantId
+            restaurantId,
+            paymentMethod: 'cash',
+            paymentStatus: 'completed'
         });
 
         await order.save();
@@ -137,7 +153,7 @@ export const createUserPreorder = async (req, res) => {
             recipientId: restaurantId,
             type: 'order-created',
             title: 'New order received',
-            message: `${customerName} placed order ${orderId}`,
+            message: `${customerName} placed order ${orderId} for ${parsedDineInAt.toLocaleString()}`,
             meta: {
                 route: '/restaurant/dashboard',
                 orderId: String(order._id)
@@ -282,7 +298,13 @@ export const getOrdersForCustomer = async (req, res) => {
 export const getOrders = async (req, res) => {
     try {
         const restaurantId = req.user._id;
-        const orders = await orderModel.find({ restaurantId }).sort({ createdAt: -1 });
+        const orders = await orderModel.find({
+            restaurantId,
+            $or: [
+                { paymentStatus: 'completed' },
+                { paymentStatus: { $exists: false } }
+            ]
+        }).sort({ createdAt: -1 });
         return res.json({ success: true, data: orders });
     } catch (error) {
         return res.json({ success: false, message: error.message });
@@ -390,7 +412,14 @@ export const getRestaurantCustomerProfile = async (req, res) => {
         }
 
         const orders = await orderModel
-            .find({ restaurantId, customerId })
+            .find({
+                restaurantId,
+                customerId,
+                $or: [
+                    { paymentStatus: 'completed' },
+                    { paymentStatus: { $exists: false } }
+                ]
+            })
             .sort({ createdAt: -1 })
             .lean();
 
