@@ -1,12 +1,14 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+import { Home, LogOut } from 'lucide-react';
 import SmallBackButton from '../components/SmallBackButton';
 import NotificationBell from '../components/NotificationBell';
 import './ChatPages.css';
 
 function RestaurantCustomerProfile() {
+  const navigate = useNavigate();
   const { customerId } = useParams();
   const [profile, setProfile] = useState(null);
   const [customer, setCustomer] = useState(null);
@@ -30,9 +32,9 @@ function RestaurantCustomerProfile() {
 
   const loadPageData = async () => {
     const [meRes, customerRes, chatRes] = await Promise.all([
-      axios.get('http://localhost:4000/api/auth/profile', { withCredentials: true }),
-      axios.get(`http://localhost:4000/api/orders/customer/${customerId}/details`, { withCredentials: true }),
-      axios.get(`http://localhost:4000/api/chat/messages/${customerId}`, { withCredentials: true })
+      axios.get('/api/auth/profile', { withCredentials: true }),
+      axios.get(`/api/orders/customer/${customerId}/details`, { withCredentials: true }),
+      axios.get(`/api/chat/messages/${customerId}`, { withCredentials: true })
     ]);
 
     if (meRes.data?.success) setProfile(meRes.data.data);
@@ -91,7 +93,7 @@ function RestaurantCustomerProfile() {
     if (!text) return;
 
     const res = await axios.post(
-      `http://localhost:4000/api/chat/messages/${customerId}`,
+      `/api/chat/messages/${customerId}`,
       { message: text },
       { withCredentials: true }
     );
@@ -99,6 +101,17 @@ function RestaurantCustomerProfile() {
     if (res.data?.success) {
       setDraft('');
       appendUniqueMessage(res.data.data);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/auth/logout', {}, { withCredentials: true });
+      localStorage.removeItem('authToken');
+      navigate('/login');
+    } catch (err) {
+      localStorage.removeItem('authToken');
+      navigate('/login');
     }
   };
 
@@ -115,10 +128,14 @@ function RestaurantCustomerProfile() {
     <div className="dashboard-container">
       <div className="header">
         <div className="logo">HotStop</div>
-        <div className="header-right"><NotificationBell /></div>
+        <div className="header-right">
+          <NotificationBell />
+          <button className="install-btn" onClick={() => navigate('/restaurant/dashboard')} aria-label="Dashboard" title="Dashboard"><Home size={22} /></button>
+          <button className="logout-btn" onClick={handleLogout} aria-label="Logout" title="Logout"><LogOut size={22} /></button>
+        </div>
       </div>
       <div className="dashboard-content">
-        <SmallBackButton to="/restaurant/dashboard" label="← Back to Dashboard" />
+        <SmallBackButton to="/restaurant/dashboard" label="Back to Dashboard" />
 
         <div className="customer-profile-head">
           <h1>{customer?.name || 'Customer Profile'}</h1>
@@ -192,3 +209,4 @@ function RestaurantCustomerProfile() {
 }
 
 export default RestaurantCustomerProfile;
+

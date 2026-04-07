@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { Download } from 'lucide-react';
 import './Auth.css';
 import SmallBackButton from '../components/SmallBackButton';
 
@@ -20,7 +21,7 @@ function AdminLogin() {
     setLoading(true);
     try {
       const response = await axios.post(
-        'http://localhost:4000/api/auth/login',
+        '/api/auth/login',
         { ...formData, role: 'admin' },
         { withCredentials: true }
       );
@@ -40,7 +41,10 @@ function AdminLogin() {
     <div className="auth-container">
       <div className="header">
         <div className="logo">HotStop</div>
-        <button className="install-btn">Install App</button>
+        <button type="button" className="install-btn" aria-label="Install App" title="Install App">
+          <Download size={20} />
+          <span>Install App</span>
+        </button>
       </div>
 
       <div className="auth-content">
@@ -94,3 +98,4 @@ function AdminLogin() {
 }
 
 export default AdminLogin;
+

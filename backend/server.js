@@ -21,7 +21,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors({
   origin: function(origin, callback) {
-    const allowed = ['http://localhost:3000', 'http://localhost:3001'];
+    const allowed = ['http://localhost:3000', 'http://localhost:3001', 'http://172.16.17.10:3000'];
     if (!origin || allowed.includes(origin)) {
       callback(null, true);
     } else {

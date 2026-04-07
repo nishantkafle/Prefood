@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { Home, MessagesSquare, LogOut } from 'lucide-react';
 import './Dashboard.css';
 import SmallBackButton from '../components/SmallBackButton';
 import NotificationBell from '../components/NotificationBell';
@@ -35,7 +36,7 @@ function UserOrders() {
     try {
       setError('');
       setLoading(true);
-      const response = await axios.get('http://localhost:4000/api/orders/my', { withCredentials: true });
+      const response = await axios.get('/api/orders/my', { withCredentials: true });
       if (response.data?.success) {
         const rows = Array.isArray(response.data.data) ? response.data.data : [];
         setOrders(rows.map((row) => ({ ...row, remainingSeconds: Number(row.remainingSeconds) || 0 })));
@@ -76,11 +77,27 @@ function UserOrders() {
     return 'status-badge preparing';
   };
 
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/auth/logout', {}, { withCredentials: true });
+      localStorage.removeItem('authToken');
+      navigate('/login');
+    } catch (err) {
+      localStorage.removeItem('authToken');
+      navigate('/login');
+    }
+  };
+
   return (
     <div className="dashboard-container">
       <div className="header">
         <div className="logo">HotStop</div>
-        <div className="header-right"><NotificationBell /></div>
+        <div className="header-right">
+          <NotificationBell />
+          <button className="install-btn" onClick={() => navigate('/user/chats')} aria-label="All Chats" title="All Chats"><MessagesSquare size={22} /></button>
+          <button className="install-btn" onClick={() => navigate('/user/dashboard')} aria-label="Dashboard" title="Dashboard"><Home size={22} /></button>
+          <button className="logout-btn" onClick={handleLogout} aria-label="Logout" title="Logout"><LogOut size={22} /></button>
+        </div>
       </div>
 
       <div className="dashboard-content">
@@ -156,3 +173,4 @@ function UserOrders() {
 }
 
 export default UserOrders;
+

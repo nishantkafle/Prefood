@@ -1,9 +1,20 @@
 import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
 
+const extractToken = (req) => {
+    if (req.cookies?.token) return req.cookies.token;
+
+    const authHeader = req.headers?.authorization || '';
+    if (authHeader.startsWith('Bearer ')) {
+        return authHeader.slice(7).trim();
+    }
+
+    return '';
+};
+
 export const authenticate = async (req, res, next) => {
     try {
-        const token = req.cookies.token;
+        const token = extractToken(req);
         
         if (!token) {
             return res.json({ success: false, message: 'Authentication required' });

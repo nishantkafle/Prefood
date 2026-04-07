@@ -1,9 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
+import { ClipboardList, LogOut, MessagesSquare } from 'lucide-react';
 import './Dashboard.css';
 import './OrderTracking.css';
-import SmallBackButton from '../components/SmallBackButton';
 import NotificationBell from '../components/NotificationBell';
 
 const FALLBACK_STAGES = ['Order Created', 'Order Accepted', 'Cooking', 'Ready'];
@@ -48,12 +48,23 @@ export default function OrderTracking() {
     return TIMER_RUNNING_STATUSES.includes(trackedOrder.status);
   };
 
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/auth/logout', {}, { withCredentials: true });
+      localStorage.removeItem('authToken');
+      navigate('/login');
+    } catch (err) {
+      localStorage.removeItem('authToken');
+      navigate('/login');
+    }
+  };
+
   const fetchOrder = async () => {
     if (fetchInFlightRef.current) return;
     fetchInFlightRef.current = true;
     try {
       setError(null);
-      const res = await axios.get(`http://localhost:4000/api/orders/track/${id}`, { withCredentials: true });
+      const res = await axios.get(`/api/orders/track/${id}`, { withCredentials: true });
       if (res.data?.success) {
         const trackedOrder = res.data.data;
         setOrder(trackedOrder);
@@ -143,10 +154,14 @@ export default function OrderTracking() {
       <div className="dashboard-container">
         <div className="header">
           <div className="logo">HotStop</div>
-          <div className="header-right"><NotificationBell /></div>
+          <div className="header-right">
+            <NotificationBell />
+            <button className="install-btn" onClick={() => navigate('/user/chats')} aria-label="All Chats" title="All Chats"><MessagesSquare size={22} /></button>
+            <button className="install-btn" onClick={() => navigate('/user/orders')} aria-label="My Orders" title="My Orders"><ClipboardList size={22} /></button>
+            <button className="logout-btn" onClick={handleLogout} aria-label="Logout" title="Logout"><LogOut size={22} /></button>
+          </div>
         </div>
         <div className="dashboard-content">
-          <SmallBackButton to="/user/orders" />
           <div className="order-tracking-error">{error}</div>
         </div>
       </div>
@@ -158,10 +173,14 @@ export default function OrderTracking() {
       <div className="dashboard-container">
         <div className="header">
           <div className="logo">HotStop</div>
-          <div className="header-right"><NotificationBell /></div>
+          <div className="header-right">
+            <NotificationBell />
+            <button className="install-btn" onClick={() => navigate('/user/chats')} aria-label="All Chats" title="All Chats"><MessagesSquare size={22} /></button>
+            <button className="install-btn" onClick={() => navigate('/user/orders')} aria-label="My Orders" title="My Orders"><ClipboardList size={22} /></button>
+            <button className="logout-btn" onClick={handleLogout} aria-label="Logout" title="Logout"><LogOut size={22} /></button>
+          </div>
         </div>
         <div className="dashboard-content">
-          <SmallBackButton to="/user/orders" />
           <div className="order-tracking-loading">Loading order...</div>
         </div>
       </div>
@@ -175,11 +194,15 @@ export default function OrderTracking() {
     <div className="dashboard-container">
       <div className="header">
         <div className="logo">HotStop</div>
-        <div className="header-right"><NotificationBell /></div>
+        <div className="header-right">
+          <NotificationBell />
+          <button className="install-btn" onClick={() => navigate('/user/chats')} aria-label="All Chats" title="All Chats"><MessagesSquare size={22} /></button>
+          <button className="install-btn" onClick={() => navigate('/user/orders')} aria-label="My Orders" title="My Orders"><ClipboardList size={22} /></button>
+          <button className="logout-btn" onClick={handleLogout} aria-label="Logout" title="Logout"><LogOut size={22} /></button>
+        </div>
       </div>
 
       <div className="dashboard-content">
-        <SmallBackButton to="/user/orders" />
         <div className="content-header">
           <div>
             <div className="breadcrumb">Home / My Orders / View Details</div>
@@ -279,3 +302,4 @@ export default function OrderTracking() {
     </div>
   );
 }
+

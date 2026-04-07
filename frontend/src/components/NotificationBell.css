@@ -40,13 +40,22 @@
 
 .notification-btn {
   position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: none;
   background: #ffffff;
   color: #ff6600;
-  padding: 10px 14px;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border-radius: 6px;
-  font-weight: 600;
   cursor: pointer;
+}
+
+.notification-btn svg {
+  width: 22px;
+  height: 22px;
 }
 
 .notification-badge {
@@ -135,5 +144,26 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .notification-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-size: 0;
+  }
+
+  .notification-panel {
+    width: min(360px, calc(100vw - 20px));
+    right: -8px;
+    max-height: 60vh;
+  }
+
+  .notification-toast-stack {
+    top: 70px;
+    right: 10px;
+    width: calc(100vw - 20px);
   }
 }

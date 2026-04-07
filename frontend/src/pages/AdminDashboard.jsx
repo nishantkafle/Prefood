@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { LayoutDashboard, Users, Store, LogOut } from 'lucide-react';
 import './AdminDashboard.css';
 
-const API = 'http://localhost:4000/api/auth';
+const API = '/api/auth';
 
 // Small Modal
 function Modal({ title, onClose, onSave, children }) {
@@ -222,22 +223,26 @@ function AdminDashboard() {
             className={`nav-item ${activeTab === 'overview' ? 'active' : ''}`}
             onClick={() => setActiveTab('overview')}
           >
+            <LayoutDashboard size={18} />
             Overview
           </button>
           <button
             className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
             onClick={() => setActiveTab('users')}
           >
+            <Users size={18} />
             Users
           </button>
           <button
             className={`nav-item ${activeTab === 'restaurants' ? 'active' : ''}`}
             onClick={() => setActiveTab('restaurants')}
           >
+            <Store size={18} />
             Restaurants
           </button>
         </nav>
         <button className="sidebar-logout" onClick={handleLogout}>
+          <LogOut size={18} />
           Logout
         </button>
       </aside>
@@ -446,3 +451,4 @@ function AdminDashboard() {
 }
 
 export default AdminDashboard;
+

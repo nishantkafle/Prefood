@@ -1,12 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
-import SmallBackButton from '../components/SmallBackButton';
+import { ClipboardList, Home, LogOut } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import './ChatPages.css';
 
 function UserChats() {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [profile, setProfile] = useState(null);
   const [conversations, setConversations] = useState([]);
@@ -34,7 +35,7 @@ function UserChats() {
   }, []);
 
   const loadConversations = useCallback(async () => {
-    const res = await axios.get('http://localhost:4000/api/chat/conversations', { withCredentials: true });
+    const res = await axios.get('/api/chat/conversations', { withCredentials: true });
     if (res.data?.success) {
       setConversations(res.data.data || []);
       return res.data.data || [];
@@ -46,7 +47,7 @@ function UserChats() {
     if (!otherUserId) return;
     setChatLoading(true);
     try {
-      const res = await axios.get(`http://localhost:4000/api/chat/messages/${otherUserId}`, { withCredentials: true });
+      const res = await axios.get(`/api/chat/messages/${otherUserId}`, { withCredentials: true });
       if (res.data?.success) {
         setMessages(res.data.data?.messages || []);
       }
@@ -56,7 +57,7 @@ function UserChats() {
   }, []);
 
   const getRestaurantById = useCallback(async (restaurantId) => {
-    const res = await axios.get('http://localhost:4000/api/auth/restaurants', { withCredentials: true });
+    const res = await axios.get('/api/auth/restaurants', { withCredentials: true });
     if (!res.data?.success) return null;
     const restaurant = (res.data.data || []).find((entry) => String(entry._id) === String(restaurantId));
     if (!restaurant) return null;
@@ -73,7 +74,7 @@ function UserChats() {
   useEffect(() => {
     (async () => {
       try {
-        const profileRes = await axios.get('http://localhost:4000/api/auth/profile', { withCredentials: true });
+        const profileRes = await axios.get('/api/auth/profile', { withCredentials: true });
         const me = profileRes.data?.data;
         setProfile(me);
 
@@ -165,7 +166,7 @@ function UserChats() {
     if (!selectedUserId || (!text && !selectedImage)) return;
 
     const response = await axios.post(
-      `http://localhost:4000/api/chat/messages/${selectedUserId}`,
+      `/api/chat/messages/${selectedUserId}`,
       { message: text, image: selectedImage },
       { withCredentials: true }
     );
@@ -189,6 +190,17 @@ function UserChats() {
 
   const conversationMap = useMemo(() => new Map(conversations.map((entry) => [String(entry.otherUser?._id), entry])), [conversations]);
 
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/auth/logout', {}, { withCredentials: true });
+      localStorage.removeItem('authToken');
+      navigate('/login');
+    } catch (err) {
+      localStorage.removeItem('authToken');
+      navigate('/login');
+    }
+  };
+
   if (loading) {
     return (
       <div className="dashboard-container">
@@ -202,10 +214,14 @@ function UserChats() {
     <div className="dashboard-container">
       <div className="header">
         <div className="logo">HotStop</div>
-        <div className="header-right"><NotificationBell /></div>
+        <div className="header-right">
+          <NotificationBell />
+          <button className="install-btn" onClick={() => navigate('/user/orders')} aria-label="My Orders" title="My Orders"><ClipboardList size={22} /></button>
+          <button className="install-btn" onClick={() => navigate('/user/dashboard')} aria-label="Dashboard" title="Dashboard"><Home size={22} /></button>
+          <button className="logout-btn" onClick={handleLogout} aria-label="Logout" title="Logout"><LogOut size={22} /></button>
+        </div>
       </div>
       <div className="dashboard-content">
-        <SmallBackButton to="/user/dashboard" label="← Back to Dashboard" />
         <div className="chat-page-wrap">
           <div className="chat-sidebar">
             <div className="chat-sidebar-title">All Messages</div>
@@ -284,3 +300,4 @@ function UserChats() {
 }
 
 export default UserChats;
+

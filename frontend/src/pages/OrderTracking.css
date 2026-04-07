@@ -208,6 +208,16 @@
 		gap: 12px;
 	}
 
+	.ot-summary-grid {
+		grid-template-columns: 1fr;
+		gap: 12px;
+	}
+
+	.ot-card,
+	.ot-panel {
+		padding: 14px;
+	}
+
 	.stage {
 		flex-direction: row;
 		justify-content: flex-start;
@@ -229,5 +239,22 @@
 
 	.label {
 		text-align: left;
+	}
+}
+
+@media (max-width: 480px) {
+	.timeline-header-row {
+		flex-direction: column;
+		align-items: flex-start;
+	}
+
+	.ot-items-table th,
+	.ot-items-table td {
+		padding: 8px;
+		font-size: 12px;
+	}
+
+	.ot-eta-value {
+		font-size: 20px;
 	}
 }

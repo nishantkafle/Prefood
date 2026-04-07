@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
-import SmallBackButton from '../components/SmallBackButton';
+import { Home, LogOut } from 'lucide-react';
 import NotificationBell from '../components/NotificationBell';
 import './ChatPages.css';
 
@@ -31,7 +31,7 @@ function RestaurantMessages() {
   };
 
   const loadConversations = async () => {
-    const res = await axios.get('http://localhost:4000/api/chat/conversations', { withCredentials: true });
+    const res = await axios.get('/api/chat/conversations', { withCredentials: true });
     if (res.data?.success) {
       setConversations(res.data.data || []);
       return res.data.data || [];
@@ -41,7 +41,7 @@ function RestaurantMessages() {
 
   const loadMessages = async (otherUserId) => {
     if (!otherUserId) return;
-    const res = await axios.get(`http://localhost:4000/api/chat/messages/${otherUserId}`, { withCredentials: true });
+    const res = await axios.get(`/api/chat/messages/${otherUserId}`, { withCredentials: true });
     if (res.data?.success) {
       setMessages(res.data.data?.messages || []);
     }
@@ -50,7 +50,7 @@ function RestaurantMessages() {
   useEffect(() => {
     (async () => {
       try {
-        const meRes = await axios.get('http://localhost:4000/api/auth/profile', { withCredentials: true });
+        const meRes = await axios.get('/api/auth/profile', { withCredentials: true });
         if (meRes.data?.success) {
           setProfile(meRes.data.data);
         }
@@ -110,7 +110,7 @@ function RestaurantMessages() {
     if (!selectedUserId || !text) return;
 
     const res = await axios.post(
-      `http://localhost:4000/api/chat/messages/${selectedUserId}`,
+      `/api/chat/messages/${selectedUserId}`,
       { message: text },
       { withCredentials: true }
     );
@@ -119,6 +119,17 @@ function RestaurantMessages() {
       setDraft('');
       appendUniqueMessage(res.data.data);
       await loadConversations();
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/auth/logout', {}, { withCredentials: true });
+      localStorage.removeItem('authToken');
+      navigate('/login');
+    } catch (err) {
+      localStorage.removeItem('authToken');
+      navigate('/login');
     }
   };
 
@@ -137,12 +148,12 @@ function RestaurantMessages() {
         <div className="logo">HotStop</div>
         <div className="header-right">
           <NotificationBell />
-          <button className="logout-btn" onClick={() => navigate('/restaurant/dashboard')}>Dashboard</button>
+          <button className="logout-btn" onClick={() => navigate('/restaurant/dashboard')} aria-label="Dashboard" title="Dashboard"><Home size={22} /></button>
+          <button className="logout-btn" onClick={handleLogout} aria-label="Logout" title="Logout"><LogOut size={22} /></button>
         </div>
       </div>
 
       <div className="dashboard-content">
-        <SmallBackButton to="/restaurant/dashboard" label="← Back to Dashboard" />
         <div className="content-header" style={{ marginBottom: 16 }}>
           <div>
             <div className="breadcrumb">Home / Messages</div>
@@ -220,3 +231,4 @@ function RestaurantMessages() {
 }
 
 export default RestaurantMessages;
+

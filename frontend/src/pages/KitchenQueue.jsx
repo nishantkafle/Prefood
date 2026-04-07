@@ -14,7 +14,7 @@ function KitchenQueue() {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const response = await axios.get('http://localhost:4000/api/orders/all', { withCredentials: true });
+      const response = await axios.get('/api/orders/all', { withCredentials: true });
       if (response.data.success) {
         setOrders(response.data.data);
       }
@@ -49,7 +49,7 @@ function KitchenQueue() {
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
       const response = await axios.put(
-        `http://localhost:4000/api/orders/${orderId}/status`,
+        `/api/orders/${orderId}/status`,
         { status: newStatus },
         { withCredentials: true }
       );
@@ -82,7 +82,7 @@ function KitchenQueue() {
     }
     try {
       const response = await axios.put(
-        `http://localhost:4000/api/orders/${orderId}/estimated-time`,
+        `/api/orders/${orderId}/estimated-time`,
         { estimatedTime: val },
         { withCredentials: true }
       );
@@ -395,3 +395,4 @@ function KitchenQueue() {
 }
 
 export default KitchenQueue;
+

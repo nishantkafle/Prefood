@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { Download } from 'lucide-react';
 import './Auth.css';
 
 function RestaurantRegister() {
@@ -63,7 +64,7 @@ function RestaurantRegister() {
     }
 
     try {
-      const response = await axios.post('http://localhost:4000/api/auth/register', {
+      const response = await axios.post('/api/auth/register', {
         name: formData.ownerName,
         email: formData.email,
         password: formData.password,
@@ -108,7 +109,10 @@ function RestaurantRegister() {
     <div className="auth-container">
       <div className="header">
         <div className="logo">HotStop</div>
-        <button className="install-btn">Install App</button>
+        <button type="button" className="install-btn" aria-label="Install App" title="Install App">
+          <Download size={20} />
+          <span>Install App</span>
+        </button>
       </div>
 
       <div className="auth-content">
@@ -310,3 +314,4 @@ function RestaurantRegister() {
 }
 
 export default RestaurantRegister;
+

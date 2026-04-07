@@ -1,5 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { Download } from 'lucide-react';
 import './RoleSelection.css';
 
 function RoleSelection() {
@@ -9,7 +11,13 @@ function RoleSelection() {
     <div className="role-selection-container">
       <div className="header">
         <div className="logo">HotStop</div>
-        <button className="install-btn">Install App</button>
+        <div className="header-actions">
+          <Link className="nav-login-link" to="/login">Login</Link>
+          <button type="button" className="install-btn" aria-label="Install App" title="Install App">
+            <Download size={20} />
+            <span>Install App</span>
+          </button>
+        </div>
       </div>
 
       <div className="main-content">

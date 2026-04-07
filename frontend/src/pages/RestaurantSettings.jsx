@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { CheckCircle2, TriangleAlert } from 'lucide-react';
 
 function RestaurantSettings({ profile, onUpdate }) {
   const [formData, setFormData] = useState({
@@ -73,7 +74,7 @@ function RestaurantSettings({ profile, onUpdate }) {
     setError('');
 
     try {
-      const response = await axios.put('http://localhost:4000/api/auth/restaurant/settings', {
+      const response = await axios.put('/api/auth/restaurant/settings', {
         ...formData,
         logo: logoBase64
       }, { withCredentials: true });
@@ -219,7 +220,7 @@ function RestaurantSettings({ profile, onUpdate }) {
 
       {toastMessage && (
         <div className={`settings-toast ${toastType}`}>
-          {toastType === 'success' ? '✓ ' : '⚠️ '}
+          {toastType === 'success' ? <CheckCircle2 size={18} /> : <TriangleAlert size={18} />}
           {toastMessage}
         </div>
       )}
@@ -228,3 +229,4 @@ function RestaurantSettings({ profile, onUpdate }) {
 }
 
 export default RestaurantSettings;
+

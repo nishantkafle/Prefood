@@ -1,8 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowLeft } from 'lucide-react';
 import './SmallBackButton.css';
 
-function SmallBackButton({ to = '/', label = '← Back', className = '' }) {
+function SmallBackButton({ to = '/', label = 'Back', className = '' }) {
   const navigate = useNavigate();
 
   const handleBack = () => {
@@ -15,6 +16,7 @@ function SmallBackButton({ to = '/', label = '← Back', className = '' }) {
 
   return (
     <button className={`small-back-btn ${className}`.trim()} onClick={handleBack} type="button">
+      <ArrowLeft size={16} />
       {label}
     </button>
   );

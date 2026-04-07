@@ -1,4 +1,7 @@
 .small-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   width: fit-content;
   background: #ffffff;
   color: #333;
@@ -13,4 +16,13 @@
 
 .small-back-btn:hover {
   background: #f8f8f8;
+}
+
+@media (max-width: 640px) {
+  .small-back-btn {
+    width: 100%;
+    text-align: center;
+    padding: 10px 12px;
+    font-size: 13px;
+  }
 }

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
+import { CheckCircle2, Clock3, Flame, Wallet } from 'lucide-react';
 
 function KitchenHome() {
   const [orders, setOrders] = useState([]);
@@ -13,7 +14,7 @@ function KitchenHome() {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const response = await axios.get('http://localhost:4000/api/orders/all', { withCredentials: true });
+      const response = await axios.get('/api/orders/all', { withCredentials: true });
       if (response.data.success) {
         setOrders(response.data.data);
       }
@@ -131,28 +132,28 @@ function KitchenHome() {
         </div>
         <div className="kh-selected-grid-full">
           <div className="kh-mini-stat">
-            <div className="kh-mini-icon">✅</div>
+            <div className="kh-mini-icon"><CheckCircle2 size={22} /></div>
             <div>
               <div className="kh-mini-label">Completed</div>
               <div className="kh-mini-value">{selectedCompleted}</div>
             </div>
           </div>
           <div className="kh-mini-stat">
-            <div className="kh-mini-icon">⏳</div>
+            <div className="kh-mini-icon"><Clock3 size={22} /></div>
             <div>
               <div className="kh-mini-label">Pending</div>
               <div className="kh-mini-value">{selectedPending}</div>
             </div>
           </div>
           <div className="kh-mini-stat">
-            <div className="kh-mini-icon">🔥</div>
+            <div className="kh-mini-icon"><Flame size={22} /></div>
             <div>
               <div className="kh-mini-label">In Kitchen</div>
               <div className="kh-mini-value">{selectedInKitchen}</div>
             </div>
           </div>
           <div className="kh-mini-stat">
-            <div className="kh-mini-icon">💰</div>
+            <div className="kh-mini-icon"><Wallet size={22} /></div>
             <div>
               <div className="kh-mini-label">Earnings</div>
               <div className="kh-mini-value">NPR {selectedEarnings.toFixed(2)}</div>
@@ -205,3 +206,4 @@ function KitchenHome() {
 }
 
 export default KitchenHome;
+

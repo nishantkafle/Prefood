@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
+import { Bell } from 'lucide-react';
 import './NotificationBell.css';
 
 function NotificationBell() {
@@ -16,7 +17,7 @@ function NotificationBell() {
   const popupTimeoutsRef = useRef({});
 
   const loadNotifications = async () => {
-    const res = await axios.get('http://localhost:4000/api/notifications', { withCredentials: true });
+    const res = await axios.get('/api/notifications', { withCredentials: true });
     if (res.data?.success) {
       setNotifications(res.data.data || []);
       setUnreadCount(Number(res.data.unreadCount) || 0);
@@ -26,7 +27,7 @@ function NotificationBell() {
   useEffect(() => {
     (async () => {
       try {
-        const me = await axios.get('http://localhost:4000/api/auth/profile', { withCredentials: true });
+        const me = await axios.get('/api/auth/profile', { withCredentials: true });
         if (me.data?.success) {
           setProfile(me.data.data);
         }
@@ -89,7 +90,7 @@ function NotificationBell() {
 
   const handleOpenNotification = async (notification) => {
     if (!notification?.isRead) {
-      await axios.patch(`http://localhost:4000/api/notifications/${notification._id}/read`, {}, { withCredentials: true });
+      await axios.patch(`/api/notifications/${notification._id}/read`, {}, { withCredentials: true });
       setNotifications((prev) => prev.map((item) => item._id === notification._id ? { ...item, isRead: true } : item));
       setUnreadCount((prev) => Math.max(0, prev - 1));
     }
@@ -107,7 +108,7 @@ function NotificationBell() {
   };
 
   const handleReadAll = async () => {
-    await axios.patch('http://localhost:4000/api/notifications/read-all', {}, { withCredentials: true });
+    await axios.patch('/api/notifications/read-all', {}, { withCredentials: true });
     setNotifications((prev) => prev.map((item) => ({ ...item, isRead: true })));
     setUnreadCount(0);
     Object.values(popupTimeoutsRef.current).forEach((timeoutId) => clearTimeout(timeoutId));
@@ -133,8 +134,8 @@ function NotificationBell() {
         </div>
       )}
 
-      <button type="button" className="notification-btn" onClick={() => setOpen((prev) => !prev)}>
-        Notifications
+      <button type="button" className="notification-btn" onClick={() => setOpen((prev) => !prev)} aria-label="Notifications" title="Notifications">
+        <Bell size={22} />
         {unreadCount > 0 && <span className="notification-badge">{unreadCount}</span>}
       </button>
 
@@ -167,3 +168,4 @@ function NotificationBell() {
 }
 
 export default NotificationBell;
+

@@ -23,7 +23,7 @@ function OrderManagement() {
 
   const fetchOrders = async () => {
     try {
-      const response = await axios.get('http://localhost:4000/api/orders/all', { withCredentials: true });
+      const response = await axios.get('/api/orders/all', { withCredentials: true });
       if (response.data.success) {
         const today = new Date();
         const todayStr = today.toDateString();
@@ -40,7 +40,7 @@ function OrderManagement() {
 
   const fetchMenuItems = async () => {
     try {
-      const response = await axios.get('http://localhost:4000/api/menu/all', { withCredentials: true });
+      const response = await axios.get('/api/menu/all', { withCredentials: true });
       if (response.data.success) {
         setMenuItems(response.data.data);
       }
@@ -108,7 +108,7 @@ function OrderManagement() {
     }
     try {
       setLoading(true);
-      const response = await axios.post('http://localhost:4000/api/orders/create', {
+      const response = await axios.post('/api/orders/create', {
         customerName: orderForm.customerName,
         customerPhone: orderForm.customerPhone,
         items: orderForm.items.map(i => ({ menuItem: i.menuItem, quantity: i.quantity }))
@@ -131,7 +131,7 @@ function OrderManagement() {
   const handleUpdateStatus = async (orderId, newStatus) => {
     try {
       const response = await axios.put(
-        `http://localhost:4000/api/orders/${orderId}/status`,
+        `/api/orders/${orderId}/status`,
         { status: newStatus },
         { withCredentials: true }
       );
@@ -275,9 +275,12 @@ function OrderManagement() {
       {showOrderForm && (
         <div className="form-modal">
           <div className="form-container order-form-container">
-            <h2>Create New Order</h2>
+            <div className="order-form-header">
+              <h2>Create New Order</h2>
+              <p>Build an offline order quickly from your current menu items.</p>
+            </div>
             <form onSubmit={handleCreateOrder}>
-              <div className="form-row">
+              <div className="form-row order-customer-row">
                 <div className="form-group">
                   <label>Customer Name *</label>
                   <input
@@ -299,13 +302,16 @@ function OrderManagement() {
                 </div>
               </div>
 
-              <div className="order-menu-select">
+              <div className="order-menu-select order-section-card">
                 <label>Select Items from Menu</label>
                 <div className="menu-select-grid">
                   {menuItems.map(item => (
                     <div key={item._id} className="menu-select-item" onClick={() => handleAddItem(item)}>
                       <span className="menu-select-name">{item.name}</span>
-                      <span className="menu-select-price">NPR {item.price}</span>
+                      <div className="menu-select-meta">
+                        <span className="menu-select-price">NPR {item.price}</span>
+                        <span className={`menu-select-category ${item.category || 'veg'}`}>{item.category || 'veg'}</span>
+                      </div>
                       <span className="menu-select-time">{item.prepTime} min</span>
                     </div>
                   ))}
@@ -313,8 +319,13 @@ function OrderManagement() {
               </div>
 
               {orderForm.items.length > 0 && (
-                <div className="order-items-summary">
+                <div className="order-items-summary order-section-card">
                   <label>Order Items</label>
+                  <div className="order-quick-stats">
+                    <span className="order-stat-pill">Items: {orderForm.items.length}</span>
+                    <span className="order-stat-pill">Total: NPR {getTotalAmount()}</span>
+                    <span className="order-stat-pill">ETA: {getEstimatedTime()} min</span>
+                  </div>
                   <table className="order-items-table">
                     <thead>
                       <tr>
@@ -342,7 +353,7 @@ function OrderManagement() {
                           <td>{item.prepTime} min</td>
                           <td>
                             <button type="button" className="remove-item-btn" onClick={() => handleRemoveItem(item.menuItem)}>
-                              X
+                              Remove
                             </button>
                           </td>
                         </tr>
@@ -360,7 +371,7 @@ function OrderManagement() {
                 <button type="button" className="cancel-btn" onClick={() => { setShowOrderForm(false); setOrderForm({ customerName: '', customerPhone: '', items: [] }); }}>
                   Cancel
                 </button>
-                <button type="submit" className="submit-btn" disabled={loading || orderForm.items.length === 0}>
+                <button type="submit" className="submit-btn order-create-btn" disabled={loading || orderForm.items.length === 0}>
                   {loading ? 'Creating...' : 'Create Order'}
                 </button>
               </div>
@@ -436,3 +447,4 @@ function OrderManagement() {
 }
 
 export default OrderManagement;
+

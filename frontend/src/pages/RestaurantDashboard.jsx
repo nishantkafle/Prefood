@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { BarChart3, ChefHat, MenuSquare, ClipboardList, MessagesSquare, Settings, LogOut, Download } from 'lucide-react';
 import OrderManagement from './OrderManagement';
 import KitchenHome from './KitchenHome';
 import KitchenQueue from './KitchenQueue';
@@ -25,15 +26,30 @@ function RestaurantDashboard() {
   });
   const [imagePreview, setImagePreview] = useState('');
   const [profile, setProfile] = useState(null);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const profileMenuRef = useRef(null);
 
   useEffect(() => {
     fetchMenuItems();
     fetchProfile();
   }, []);
 
+  useEffect(() => {
+    const handleOutsideClick = (event) => {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, []);
+
   const fetchProfile = async () => {
     try {
-      const response = await axios.get('http://localhost:4000/api/auth/profile', { withCredentials: true });
+      const response = await axios.get('/api/auth/profile', { withCredentials: true });
       if (response.data.success) {
         setProfile(response.data.data);
       }
@@ -45,7 +61,7 @@ function RestaurantDashboard() {
   const fetchMenuItems = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('http://localhost:4000/api/menu/all', { withCredentials: true });
+      const response = await axios.get('/api/menu/all', { withCredentials: true });
       if (response.data.success) {
         setMenuItems(response.data.data);
       }
@@ -81,7 +97,7 @@ function RestaurantDashboard() {
       if (editingItem) {
         // Update existing item
         const response = await axios.put(
-          `http://localhost:4000/api/menu/${editingItem._id}`,
+          `/api/menu/${editingItem._id}`,
           formData,
           { withCredentials: true }
         );
@@ -93,7 +109,7 @@ function RestaurantDashboard() {
       } else {
         // Add new item
         const response = await axios.post(
-          'http://localhost:4000/api/menu/add',
+          '/api/menu/add',
           formData,
           { withCredentials: true }
         );
@@ -142,7 +158,7 @@ function RestaurantDashboard() {
     if (window.confirm('Are you sure you want to delete this menu item?')) {
       try {
         const response = await axios.delete(
-          `http://localhost:4000/api/menu/${id}`,
+          `/api/menu/${id}`,
           { withCredentials: true }
         );
         if (response.data.success) {
@@ -157,13 +173,29 @@ function RestaurantDashboard() {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:4000/api/auth/logout', {}, { withCredentials: true });
-      navigate('/restaurant/login');
+      await axios.post('/api/auth/logout', {}, { withCredentials: true });
+      localStorage.removeItem('authToken');
+      navigate('/login');
     } catch (err) {
       console.error('Logout error:', err);
-      navigate('/restaurant/login');
+      localStorage.removeItem('authToken');
+      navigate('/login');
     }
   };
+
+  const menuMetrics = useMemo(() => {
+    const totalItems = menuItems.length;
+    const vegItems = menuItems.filter((item) => item.category === 'veg').length;
+    const nonVegItems = menuItems.filter((item) => item.category === 'non-veg').length;
+    const veganItems = menuItems.filter((item) => item.category === 'vegan').length;
+
+    return {
+      totalItems,
+      vegItems,
+      nonVegItems,
+      veganItems
+    };
+  }, [menuItems]);
 
   return (
     <div className="dashboard-container">
@@ -174,14 +206,17 @@ function RestaurantDashboard() {
           ) : (
             <div className="header-logo-placeholder">Logo</div>
           )}
-          <span className="logo">{profile?.restaurantName || 'HotStop'}</span>
+          <span className="logo">HotStop</span>
         </div>
         <div className="header-right">
           <div className="date-time">
             {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
           </div>
           <NotificationBell />
-          <button className="install-btn">Install App</button>
+          <button type="button" className="install-btn install-app-btn" aria-label="Install App" title="Install App">
+            <Download size={20} />
+            <span>Install App</span>
+          </button>
         </div>
       </div>
 
@@ -189,30 +224,66 @@ function RestaurantDashboard() {
         <div className="sidebar">
           <div className="sidebar-top">
             <div className={`sidebar-item ${activeSection === 'home' ? 'active' : ''}`} onClick={() => setActiveSection('home')}>
+              <BarChart3 size={18} />
               Kitchen Analytics
             </div>
             <div className={`sidebar-item ${activeSection === 'kitchen' ? 'active' : ''}`} onClick={() => setActiveSection('kitchen')}>
+              <ChefHat size={18} />
               Kitchen Queue
             </div>
             <div className={`sidebar-item ${activeSection === 'menu' ? 'active' : ''}`} onClick={() => setActiveSection('menu')}>
+              <MenuSquare size={18} />
               Menu Management
             </div>
             <div className={`sidebar-item ${activeSection === 'orders' ? 'active' : ''}`} onClick={() => setActiveSection('orders')}>
+              <ClipboardList size={18} />
               Orders Management
             </div>
             <div className="sidebar-item" onClick={() => navigate('/restaurant/messages')}>
+              <MessagesSquare size={18} />
               Messages
             </div>
           </div>
 
-          <div className="sidebar-bottom">
-            <button 
-              className={`sidebar-settings-btn ${activeSection === 'settings' ? 'active' : ''}`} 
-              onClick={() => setActiveSection('settings')}
+          <div className="sidebar-bottom" ref={profileMenuRef}>
+            <button
+              className="profile-trigger"
+              onClick={() => setShowProfileMenu((prev) => !prev)}
+              type="button"
             >
-              Settings
+              {profile?.logo ? (
+                <img src={profile.logo} alt="Profile" className="profile-trigger-image" />
+              ) : (
+                <div className="profile-trigger-fallback">
+                  {(profile?.restaurantName || 'R').charAt(0).toUpperCase()}
+                </div>
+              )}
+              <span className="profile-trigger-name">{profile?.restaurantName || 'Restaurant Profile'}</span>
             </button>
-            <button className="sidebar-logout-btn" onClick={handleLogout}>Logout</button>
+
+            {showProfileMenu && (
+              <div className="profile-dropdown">
+                <button
+                  className="profile-dropdown-item"
+                  onClick={() => {
+                    setActiveSection('settings');
+                    setShowProfileMenu(false);
+                  }}
+                  type="button"
+                >
+                  <Settings size={16} />
+                  Settings
+                </button>
+                <button
+                  className="profile-dropdown-item logout"
+                  onClick={handleLogout}
+                  type="button"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
@@ -222,16 +293,35 @@ function RestaurantDashboard() {
           ) : activeSection === 'kitchen' ? (
             <KitchenQueue />
           ) : activeSection === 'menu' ? (
-            <>
-              <div className="content-header">
+            <div className="menu-analytics-shell">
+              <div className="content-header menu-content-header">
                 <div>
                   <div className="breadcrumb">Home / Menu Management</div>
-                  <h1>Menu Items</h1>
-                  <p className="subtitle">Manage your food and beverage offerings</p>
+                  <h1>Menu Performance</h1>
+                  <p className="subtitle">Track your menu like a dashboard and manage offerings faster</p>
                 </div>
                 <button className="add-btn" onClick={() => { resetForm(); setShowForm(true); }}>
                   + Add New Item
                 </button>
+              </div>
+
+              <div className="menu-kpi-grid">
+                <div className="menu-kpi-card">
+                  <div className="menu-kpi-title">TOTAL ITEMS</div>
+                  <div className="menu-kpi-value">{menuMetrics.totalItems}</div>
+                </div>
+                <div className="menu-kpi-card">
+                  <div className="menu-kpi-title">TOTAL VEG</div>
+                  <div className="menu-kpi-value">{menuMetrics.vegItems}</div>
+                </div>
+                <div className="menu-kpi-card">
+                  <div className="menu-kpi-title">TOTAL NON-VEG</div>
+                  <div className="menu-kpi-value">{menuMetrics.nonVegItems}</div>
+                </div>
+                <div className="menu-kpi-card">
+                  <div className="menu-kpi-title">TOTAL VEGAN</div>
+                  <div className="menu-kpi-value">{menuMetrics.veganItems}</div>
+                </div>
               </div>
 
               {showForm && (
@@ -328,17 +418,11 @@ function RestaurantDashboard() {
                 </div>
               )}
 
-              <div className="stats-cards">
-                <div className="stat-card">
-                  <div className="stat-icon">Menu</div>
-                  <div className="stat-info">
-                    <div className="stat-label">TOTAL ITEMS</div>
-                    <div className="stat-value">{menuItems.length}</div>
-                  </div>
-                </div>
-              </div>
-
               <div className="menu-items-list">
+                <div className="menu-items-headline">
+                  <h3>All Menu Items</h3>
+                  <span className="menu-items-count">{menuItems.length} items</span>
+                </div>
                 {loading && !menuItems.length ? (
                   <div className="loading">Loading menu items...</div>
                 ) : menuItems.length === 0 ? (
@@ -365,8 +449,8 @@ function RestaurantDashboard() {
                           </div>
                           <p className="menu-item-description">{item.description}</p>
                           <div className="menu-item-info">
-                            <span>Price: NPR {item.price}</span>
-                            <span>Prep: {item.prepTime} min</span>
+                            <span className="metric-pill">NPR {item.price}</span>
+                            <span className="metric-pill">{item.prepTime} min prep</span>
                           </div>
                           <div className="menu-item-actions">
                             <button className="edit-btn" onClick={() => handleEdit(item)}>
@@ -382,7 +466,7 @@ function RestaurantDashboard() {
                   </div>
                 )}
               </div>
-            </>
+            </div>
           ) : activeSection === 'orders' ? (
             <OrderManagement />
           ) : activeSection === 'settings' ? (
@@ -396,3 +480,4 @@ function RestaurantDashboard() {
 }
 
 export default RestaurantDashboard;
+
