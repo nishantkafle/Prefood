@@ -24,25 +24,25 @@ export const getConversations = async (req, res) => {
             return res.status(403).json({ success: false, message: 'Access denied' });
         }
 
-        const messages = await chatMessageModel
-            .find({
-                $or: [
-                    { senderId: currentUser._id },
-                    { receiverId: currentUser._id }
-                ]
-            })
-            .sort({ createdAt: -1 })
-            .lean();
-
-        const seen = new Set();
-        const latestPerConversation = [];
-
-        for (const message of messages) {
-            if (!seen.has(message.conversationKey)) {
-                seen.add(message.conversationKey);
-                latestPerConversation.push(message);
-            }
-        }
+        const latestPerConversation = await chatMessageModel.aggregate([
+            {
+                $match: {
+                    $or: [
+                        { senderId: currentUser._id },
+                        { receiverId: currentUser._id }
+                    ]
+                }
+            },
+            { $sort: { createdAt: -1 } },
+            {
+                $group: {
+                    _id: '$conversationKey',
+                    latestMessage: { $first: '$$ROOT' }
+                }
+            },
+            { $replaceRoot: { newRoot: '$latestMessage' } },
+            { $sort: { createdAt: -1 } }
+        ]);
 
         const counterpartIds = latestPerConversation.map((message) => (
             String(message.senderId) === String(currentUser._id)
@@ -93,6 +93,8 @@ export const getMessagesWithUser = async (req, res) => {
     try {
         const currentUser = req.user;
         const { otherUserId } = req.params;
+        const requestedLimit = Number(req.query.limit) || 200;
+        const limit = Math.max(50, Math.min(500, requestedLimit));
 
         if (!isValidObjectId(otherUserId)) {
             return res.status(400).json({ success: false, message: 'Invalid user id' });
@@ -118,8 +120,11 @@ export const getMessagesWithUser = async (req, res) => {
 
         const messages = await chatMessageModel
             .find({ conversationKey })
-            .sort({ createdAt: 1 })
+            .sort({ createdAt: -1 })
+            .limit(limit)
             .lean();
+
+        messages.reverse();
 
         return res.json({
             success: true,

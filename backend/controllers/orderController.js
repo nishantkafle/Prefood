@@ -4,12 +4,15 @@ import userModel from '../models/userModel.js';
 import { getIO } from '../utils/socket.js';
 import { createNotification } from '../utils/notifications.js';
 
-const VALID_STATUSES = ['pending', 'accepted', 'cooking', 'preparing', 'ready', 'completed', 'cancelled', 'delayed'];
+const VALID_STATUSES = ['pending', 'scheduled', 'accepted', 'cooking', 'preparing', 'ready', 'completed', 'cancelled', 'delayed'];
+const MAX_SCHEDULE_DAYS = 7;
+const MAX_SCHEDULE_MS = MAX_SCHEDULE_DAYS * 24 * 60 * 60 * 1000;
 
 const TRACKING_STAGES = ['Order Created', 'Order Accepted', 'Cooking', 'Ready'];
 
 const STATUS_STAGE_INDEX = {
     pending: 0,
+    scheduled: 1,
     accepted: 1,
     cooking: 2,
     preparing: 2,
@@ -20,6 +23,93 @@ const STATUS_STAGE_INDEX = {
 };
 
 const isLikelyOrderCode = (value) => /^ORD-\d+$/i.test(value);
+
+const validateDineInAt = (dineInAt, { required = false } = {}) => {
+    if (!dineInAt) {
+        if (required) {
+            return {
+                valid: false,
+                status: 400,
+                message: 'Please select your dine-in arrival time'
+            };
+        }
+        return { valid: true, parsedDineInAt: null };
+    }
+
+    const parsedDineInAt = new Date(dineInAt);
+    if (Number.isNaN(parsedDineInAt.getTime())) {
+        return {
+            valid: false,
+            status: 400,
+            message: 'Invalid dine-in arrival time'
+        };
+    }
+
+    const now = Date.now();
+    const dineInTimestamp = parsedDineInAt.getTime();
+
+    if (dineInTimestamp < now) {
+        return {
+            valid: false,
+            status: 400,
+            message: 'Dine-in arrival time cannot be in the past'
+        };
+    }
+
+    if (dineInTimestamp > now + MAX_SCHEDULE_MS) {
+        return {
+            valid: false,
+            status: 400,
+            message: `Dine-in arrival time can only be scheduled up to ${MAX_SCHEDULE_DAYS} days ahead`
+        };
+    }
+
+    return { valid: true, parsedDineInAt };
+};
+
+const getScheduleReleaseTimestamp = (order) => {
+    if (!order?.dineInAt) return null;
+    const dineInTimestamp = new Date(order.dineInAt).getTime();
+    if (!Number.isFinite(dineInTimestamp)) return null;
+
+    const prepMinutes = Math.max(1, Number(order.estimatedTime) || 0);
+    return dineInTimestamp - prepMinutes * 60 * 1000;
+};
+
+const shouldReleaseScheduledOrder = (order, now = Date.now()) => {
+    if (order?.status !== 'scheduled') return false;
+    const releaseAt = getScheduleReleaseTimestamp(order);
+    if (!releaseAt) return true;
+    return now >= releaseAt;
+};
+
+const syncScheduledOrdersForRestaurant = async (restaurantId) => {
+    if (!restaurantId) return;
+
+    const scheduledOrders = await orderModel.find({
+        restaurantId,
+        status: 'scheduled'
+    });
+
+    if (scheduledOrders.length === 0) return;
+
+    const now = Date.now();
+    const dueOrderIds = scheduledOrders
+        .filter((order) => shouldReleaseScheduledOrder(order, now))
+        .map((order) => order._id);
+
+    if (dueOrderIds.length === 0) return;
+
+    await orderModel.updateMany(
+        { _id: { $in: dueOrderIds } },
+        {
+            $set: {
+                status: 'pending',
+                updatedAt: new Date()
+            }
+        }
+    );
+};
 
 const buildTrackingResponse = (order) => {
     const now = Date.now();
@@ -87,18 +177,12 @@ export const createUserPreorder = async (req, res) => {
             return res.json({ success: false, message: 'At least one item is required' });
         }
 
-        if (!dineInAt) {
-            return res.status(400).json({ success: false, message: 'Please select your dine-in arrival time' });
+        const scheduleValidation = validateDineInAt(dineInAt, { required: true });
+        if (!scheduleValidation.valid) {
+            return res.status(scheduleValidation.status).json({ success: false, message: scheduleValidation.message });
         }
 
-        const parsedDineInAt = new Date(dineInAt);
-        if (Number.isNaN(parsedDineInAt.getTime())) {
-            return res.status(400).json({ success: false, message: 'Invalid dine-in arrival time' });
-        }
-
-        if (parsedDineInAt.getTime() < Date.now()) {
-            return res.status(400).json({ success: false, message: 'Dine-in arrival time cannot be in the past' });
-        }
+        const { parsedDineInAt } = scheduleValidation;
 
         const customerName = req.user?.name || 'Customer';
 
@@ -108,6 +192,14 @@ export const createUserPreorder = async (req, res) => {
 
         if (menuItems.length !== menuItemIds.length) {
             return res.json({ success: false, message: 'One or more menu items not found' });
+        }
+
+        const inactiveItems = menuItems.filter((menu) => menu.isActive === false);
+        if (inactiveItems.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `${inactiveItems[0].name} is out of stock`
+            });
         }
 
         const menuMap = {};
@@ -171,12 +263,19 @@ export const createUserPreorder = async (req, res) => {
 // Create new order
 export const createOrder = async (req, res) => {
     try {
-        const { customerName, customerPhone, items } = req.body;
+        const { customerName, customerPhone, items, dineInAt } = req.body;
         const restaurantId = req.user._id;
 
         if (!customerName || !items || items.length === 0) {
             return res.json({ success: false, message: 'Customer name and at least one item are required' });
         }
+
+        const scheduleValidation = validateDineInAt(dineInAt, { required: false });
+        if (!scheduleValidation.valid) {
+            return res.status(scheduleValidation.status).json({ success: false, message: scheduleValidation.message });
+        }
+
+        const { parsedDineInAt } = scheduleValidation;
 
         // Fetch menu items to get current prices and prep times
         const menuItemIds = items.map(i => i.menuItem);
@@ -184,6 +283,14 @@ export const createOrder = async (req, res) => {
 
         if (menuItems.length !== menuItemIds.length) {
             return res.json({ success: false, message: 'One or more menu items not found' });
+        }
+
+        const inactiveItems = menuItems.filter((menu) => menu.isActive === false);
+        if (inactiveItems.length > 0) {
+            return res.status(400).json({
+                success: false,
+                message: `${inactiveItems[0].name} is out of stock`
+            });
         }
 
         const menuMap = {};
@@ -213,6 +320,7 @@ export const createOrder = async (req, res) => {
             orderId,
             customerName,
             customerPhone: customerPhone || '',
+            dineInAt: parsedDineInAt,
             items: orderItems,
             totalAmount,
             estimatedTime: maxPrepTime,
@@ -248,6 +356,11 @@ export const getOrderForCustomer = async (req, res) => {
 
         if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
+        if (shouldReleaseScheduledOrder(order)) {
+            order.status = 'pending';
+            await order.save();
+        }
+
         // Restrict visibility to authenticated customer only
         if (!order.customerId || !req.user || order.customerId.toString() !== req.user._id.toString()) {
             return res.status(403).json({ success: false, message: 'Access denied for this order' });
@@ -263,6 +376,24 @@ export const getOrderForCustomer = async (req, res) => {
 export const getOrdersForCustomer = async (req, res) => {
     try {
         const customerId = req.user?._id;
+        const scheduledOrders = await orderModel.find({ customerId, status: 'scheduled' });
+        const now = Date.now();
+        const dueOrderIds = scheduledOrders
+            .filter((order) => shouldReleaseScheduledOrder(order, now))
+            .map((order) => order._id);
+
+        if (dueOrderIds.length > 0) {
+            await orderModel.updateMany(
+                { _id: { $in: dueOrderIds } },
+                {
+                    $set: {
+                        status: 'pending',
+                        updatedAt: new Date()
+                    }
+                }
+            );
+        }
+
         const orders = await orderModel
             .find({ customerId })
             .populate('restaurantId', 'restaurantName')
@@ -298,6 +429,8 @@ export const getOrdersForCustomer = async (req, res) => {
 export const getOrders = async (req, res) => {
     try {
         const restaurantId = req.user._id;
+        await syncScheduledOrdersForRestaurant(restaurantId);
+
         const orders = await orderModel.find({
             restaurantId,
             $or: [
@@ -328,11 +461,19 @@ export const updateOrderStatus = async (req, res) => {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
 
-        if (!order.acceptedAt && ['accepted', 'cooking', 'preparing', 'delayed', 'ready', 'completed'].includes(normalizedStatus)) {
+        let nextStatus = normalizedStatus;
+        const dineInTimestamp = order?.dineInAt ? new Date(order.dineInAt).getTime() : null;
+        const hasFutureDineIn = Number.isFinite(dineInTimestamp) && dineInTimestamp > Date.now();
+
+        if (normalizedStatus === 'accepted' && hasFutureDineIn) {
+            nextStatus = 'scheduled';
+        }
+
+        if (!order.acceptedAt && ['accepted', 'cooking', 'preparing', 'delayed', 'ready', 'completed'].includes(nextStatus)) {
             order.acceptedAt = new Date();
         }
 
-        order.status = normalizedStatus;
+        order.status = nextStatus;
         await order.save();
 
         if (order.customerId) {
@@ -340,7 +481,7 @@ export const updateOrderStatus = async (req, res) => {
                 recipientId: order.customerId,
                 type: 'order-status',
                 title: 'Order status updated',
-                message: `Your order ${order.orderId} is now ${normalizedStatus}`,
+                message: `Your order ${order.orderId} is now ${nextStatus}`,
                 meta: {
                     route: `/order/track/${order._id}`,
                     orderId: String(order._id)

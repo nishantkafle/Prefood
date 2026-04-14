@@ -12,6 +12,8 @@ const BACKEND_BASE_URL = process.env.BACKEND_URL || `http://localhost:${process.
 const FRONTEND_BASE_URL = process.env.FRONTEND_URL || 'http://localhost:3000';
 
 const SIGNED_FIELD_NAMES = 'total_amount,transaction_uuid,product_code';
+const MAX_SCHEDULE_DAYS = 7;
+const MAX_SCHEDULE_MS = MAX_SCHEDULE_DAYS * 24 * 60 * 60 * 1000;
 
 const buildSignature = (totalAmount, transactionUuid, productCode) => {
   const signingString = `total_amount=${totalAmount},transaction_uuid=${transactionUuid},product_code=${productCode}`;
@@ -169,6 +171,13 @@ export const initiateEsewaPayment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Dine-in arrival time cannot be in the past' });
     }
 
+    if (parsedDineInAt.getTime() > Date.now() + MAX_SCHEDULE_MS) {
+      return res.status(400).json({
+        success: false,
+        message: `Dine-in arrival time can only be scheduled up to ${MAX_SCHEDULE_DAYS} days ahead`
+      });
+    }
+
     const customerName = req.user?.name || 'Customer';
 
     const menuItemIds = items.map((item) => item.menuItem);
@@ -176,6 +185,14 @@ export const initiateEsewaPayment = async (req, res) => {
 
     if (menuItems.length !== menuItemIds.length) {
       return res.status(400).json({ success: false, message: 'One or more menu items not found' });
+    }
+
+    const inactiveItems = menuItems.filter((menu) => menu.isActive === false);
+    if (inactiveItems.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `${inactiveItems[0].name} is out of stock`
+      });
     }
 
     const menuMap = {};

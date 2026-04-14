@@ -1,5 +1,5 @@
 import express from 'express';
-import { addMenuItem, getMenuItems, updateMenuItem, deleteMenuItem, getMenuItem } from '../controllers/menuController.js';
+import { addMenuItem, getMenuItems, updateMenuItem, deleteMenuItem, getMenuItem, toggleMenuItemStatus } from '../controllers/menuController.js';
 import { authenticate, isRestaurant } from '../middleware/authMiddleware.js';
 
 const menuRouter = express.Router();
@@ -10,6 +10,7 @@ menuRouter.use(isRestaurant);
 
 menuRouter.post('/add', addMenuItem);
 menuRouter.get('/all', getMenuItems);
+menuRouter.patch('/:id/status', toggleMenuItemStatus);
 menuRouter.get('/:id', getMenuItem);
 menuRouter.put('/:id', updateMenuItem);
 menuRouter.delete('/:id', deleteMenuItem);

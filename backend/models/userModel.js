@@ -20,7 +20,10 @@ const userSchema = new mongoose.Schema({
     serviceType: {type: String, default: ''},
     openingTime: {type: String, default: ''},
     closingTime: {type: String, default: ''},
+    latitude: {type: Number, default: null},
+    longitude: {type: Number, default: null},
     isActive: {type: Boolean, default: true},
+    isFeaturedHome: {type: Boolean, default: false},
 })
 const userModel = mongoose.models.user || mongoose.model('user', userSchema);
 

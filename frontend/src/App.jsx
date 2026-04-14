@@ -1,17 +1,75 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import axios from 'axios';
-import CommonLogin from './pages/CommonLogin';
-import CommonRegister from './pages/CommonRegister';
-import UserDashboard from './pages/UserDashboard';
-import UserChats from './pages/UserChats';
-import RestaurantDashboard from './pages/RestaurantDashboard';
-import RestaurantCustomerProfile from './pages/RestaurantCustomerProfile';
-import RestaurantMessages from './pages/RestaurantMessages';
-import OrderTracking from './pages/OrderTracking';
-import UserOrders from './pages/UserOrders';
-import AdminDashboard from './pages/AdminDashboard';
-import PaymentStatus from './pages/PaymentStatus';
+import PublicHome from './pages/public/PublicHome';
+import UserDashboard from './pages/user/UserDashboard';
+import UserChats from './pages/user/UserChats';
+import RestaurantDashboard from './pages/restaurant/RestaurantDashboard';
+import RestaurantCustomerProfile from './pages/restaurant/RestaurantCustomerProfile';
+import RestaurantMessages from './pages/restaurant/RestaurantMessages';
+import OrderTracking from './pages/user/OrderTracking';
+import UserOrders from './pages/user/UserOrders';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import PaymentStatus from './pages/user/PaymentStatus';
+import UserSettings from './pages/user/UserSettings';
+
+const AUTH_CACHE_TTL_MS = 30000;
+
+const authProfileCache = {
+  role: null,
+  checkedAt: 0,
+  token: '',
+  inFlight: null
+};
+
+function getAuthTokenSnapshot() {
+  try {
+    return localStorage.getItem('authToken') || '';
+  } catch (error) {
+    return '';
+  }
+}
+
+function getFreshCachedRole() {
+  const token = getAuthTokenSnapshot();
+  const isFresh = (Date.now() - authProfileCache.checkedAt) < AUTH_CACHE_TTL_MS;
+  if (!isFresh || authProfileCache.token !== token) {
+    return undefined;
+  }
+  return authProfileCache.role;
+}
+
+async function getProfileRoleCached() {
+  const token = getAuthTokenSnapshot();
+  const cachedRole = getFreshCachedRole();
+  if (cachedRole !== undefined) {
+    return cachedRole;
+  }
+
+  if (authProfileCache.inFlight) {
+    return authProfileCache.inFlight;
+  }
+
+  authProfileCache.inFlight = axios.get('/api/auth/profile', { withCredentials: true })
+    .then((response) => {
+      const role = response.data?.success && response.data?.data?.role
+        ? response.data.data.role
+        : null;
+      authProfileCache.role = role;
+      return role;
+    })
+    .catch(() => {
+      authProfileCache.role = null;
+      return null;
+    })
+    .finally(() => {
+      authProfileCache.checkedAt = Date.now();
+      authProfileCache.token = token;
+      authProfileCache.inFlight = null;
+    });
+
+  return authProfileCache.inFlight;
+}
 
 function getDashboardRouteByRole(role) {
   if (role === 'admin') return '/admin/dashboard';
@@ -19,83 +77,36 @@ function getDashboardRouteByRole(role) {
   return '/user/dashboard';
 }
 
-function PublicOnlyRoute({ children }) {
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const [profileRole, setProfileRole] = useState(null);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const checkProfile = async () => {
-      try {
-        const response = await axios.get('/api/auth/profile', { withCredentials: true });
-        if (!isMounted) return;
-
-        if (response.data?.success && response.data?.data?.role) {
-          setProfileRole(response.data.data.role);
-        } else {
-          setProfileRole(null);
-        }
-      } catch (error) {
-        if (isMounted) setProfileRole(null);
-      } finally {
-        if (isMounted) setCheckingAuth(false);
-      }
-    };
-
-    checkProfile();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  if (checkingAuth) {
-    return <div className="loading">Checking access...</div>;
-  }
-
-  if (profileRole) {
-    return <Navigate to={getDashboardRouteByRole(profileRole)} replace />;
-  }
-
-  return children;
-}
-
 function RoleProtectedRoute({ allowedRole, children }) {
-  const [checkingAuth, setCheckingAuth] = useState(true);
-  const [profileRole, setProfileRole] = useState(null);
+  const cachedRole = getFreshCachedRole();
+  const [checkingAuth, setCheckingAuth] = useState(cachedRole === undefined);
+  const [profileRole, setProfileRole] = useState(cachedRole ?? null);
 
   useEffect(() => {
+    if (cachedRole !== undefined) return;
+
     let isMounted = true;
 
     const checkProfile = async () => {
-      try {
-        const response = await axios.get('/api/auth/profile', { withCredentials: true });
-        if (!isMounted) return;
+      const role = await getProfileRoleCached();
+      if (!isMounted) return;
 
-        if (response.data?.success && response.data?.data?.role) {
-          setProfileRole(response.data.data.role);
-        } else {
-          setProfileRole(null);
-        }
-      } catch (error) {
-        if (isMounted) setProfileRole(null);
-      } finally {
-        if (isMounted) setCheckingAuth(false);
-      }
+      setProfileRole(role);
+      setCheckingAuth(false);
     };
 
     checkProfile();
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [cachedRole]);
 
   if (checkingAuth) {
     return <div className="loading">Checking access...</div>;
   }
 
   if (!profileRole) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   if (profileRole !== allowedRole) {
@@ -111,43 +122,23 @@ function App() {
       <Routes>
         <Route
           path="/"
-          element={(
-            <PublicOnlyRoute>
-              <Navigate to="/login" replace />
-            </PublicOnlyRoute>
-          )}
+          element={<PublicHome />}
         />
         <Route
           path="/login"
-          element={(
-            <PublicOnlyRoute>
-              <CommonLogin />
-            </PublicOnlyRoute>
-          )}
+          element={<Navigate to="/" replace />}
         />
         <Route
           path="/user/login"
-          element={(
-            <PublicOnlyRoute>
-              <CommonLogin />
-            </PublicOnlyRoute>
-          )}
+          element={<Navigate to="/" replace />}
         />
         <Route
           path="/register"
-          element={(
-            <PublicOnlyRoute>
-              <CommonRegister />
-            </PublicOnlyRoute>
-          )}
+          element={<Navigate to="/" replace />}
         />
         <Route
           path="/user/register"
-          element={(
-            <PublicOnlyRoute>
-              <CommonRegister />
-            </PublicOnlyRoute>
-          )}
+          element={<Navigate to="/" replace />}
         />
         <Route
           path="/payment-success"
@@ -190,20 +181,20 @@ function App() {
           )}
         />
         <Route
-          path="/restaurant/login"
+          path="/user/settings"
           element={(
-            <PublicOnlyRoute>
-              <CommonLogin />
-            </PublicOnlyRoute>
+            <RoleProtectedRoute allowedRole="user">
+              <UserSettings />
+            </RoleProtectedRoute>
           )}
         />
         <Route
+          path="/restaurant/login"
+          element={<Navigate to="/" replace />}
+        />
+        <Route
           path="/restaurant/register"
-          element={(
-            <PublicOnlyRoute>
-              <CommonRegister />
-            </PublicOnlyRoute>
-          )}
+          element={<Navigate to="/" replace />}
         />
         <Route
           path="/restaurant/dashboard"
@@ -231,11 +222,7 @@ function App() {
         />
         <Route
           path="/admin/login"
-          element={(
-            <PublicOnlyRoute>
-              <CommonLogin />
-            </PublicOnlyRoute>
-          )}
+          element={<Navigate to="/" replace />}
         />
         <Route
           path="/admin/dashboard"

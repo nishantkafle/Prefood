@@ -23,7 +23,7 @@ const orderSchema = new mongoose.Schema({
     acceptedAt: { type: Date, default: null },
     status: {
         type: String,
-        enum: ['pending', 'accepted', 'cooking', 'preparing', 'ready', 'completed', 'cancelled', 'delayed'],
+        enum: ['pending', 'scheduled', 'accepted', 'cooking', 'preparing', 'ready', 'completed', 'cancelled', 'delayed'],
         default: 'pending'
     },
     restaurantId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true }

@@ -1,0 +1,32 @@
+.small-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  color: #64748b;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 20px;
+  width: fit-content;
+}
+
+.small-back-btn:hover {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #ea580c;
+  transform: translateX(-2px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.small-back-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.small-back-btn:hover svg {
+  transform: scale(1.1);
+}
