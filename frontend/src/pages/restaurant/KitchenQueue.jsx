@@ -164,9 +164,40 @@ function KitchenQueue() {
     return elapsed > (order.estimatedTime || 15) * 45 && !isLate(order);
   };
 
-  const pendingOrders = orders.filter(o => o.status === 'pending');
-  const cookingOrders = orders.filter(o => ['accepted', 'cooking', 'preparing', 'delayed'].includes(o.status));
-  const readyOrders = orders.filter(o => o.status === 'ready');
+  const getScheduleReleaseTimestamp = (order) => {
+    if (!order?.dineInAt) return null;
+    const dineInAt = new Date(order.dineInAt).getTime();
+    if (!Number.isFinite(dineInAt)) return null;
+    const prepMinutes = Math.max(1, Number(order.estimatedTime) || 0);
+    return dineInAt - prepMinutes * 60 * 1000;
+  };
+
+  const getComparableTimestamp = (value, fallback = 0) => {
+    const ts = Number(value);
+    return Number.isFinite(ts) ? ts : fallback;
+  };
+
+  const sortOrdersForKitchenFlow = (a, b) => {
+    const aScheduled = Boolean(a.dineInAt);
+    const bScheduled = Boolean(b.dineInAt);
+
+    // Scheduled orders should be handled first in queue views.
+    if (aScheduled !== bScheduled) return aScheduled ? -1 : 1;
+
+    if (aScheduled && bScheduled) {
+      const aRelease = getComparableTimestamp(getScheduleReleaseTimestamp(a), Number.MAX_SAFE_INTEGER);
+      const bRelease = getComparableTimestamp(getScheduleReleaseTimestamp(b), Number.MAX_SAFE_INTEGER);
+      if (aRelease !== bRelease) return aRelease - bRelease;
+    }
+
+    const aCreated = getComparableTimestamp(new Date(a.createdAt).getTime(), Number.MAX_SAFE_INTEGER);
+    const bCreated = getComparableTimestamp(new Date(b.createdAt).getTime(), Number.MAX_SAFE_INTEGER);
+    return aCreated - bCreated;
+  };
+
+  const pendingOrders = [...orders.filter(o => o.status === 'pending')].sort(sortOrdersForKitchenFlow);
+  const cookingOrders = [...orders.filter(o => ['accepted', 'cooking', 'preparing', 'delayed'].includes(o.status))].sort(sortOrdersForKitchenFlow);
+  const readyOrders = [...orders.filter(o => o.status === 'ready')].sort(sortOrdersForKitchenFlow);
   const activeOrders = [...pendingOrders, ...cookingOrders];
 
   const getFilteredActive = () => {
@@ -193,13 +224,14 @@ function KitchenQueue() {
     fetchOrders();
   };
 
-  const renderOrderCard = (order) => {
+  const renderOrderCard = (order, positionIndex = null) => {
     const elapsed = elapsedTimes[order._id] || 0;
     const elapsedMin = Math.floor(elapsed / 60);
     const late = isLate(order);
     const priority = isPriority(order);
     const timerStarted = isTimerStarted(order);
     const remainingSeconds = getRemainingSeconds(order);
+    const hasFutureDineIn = Boolean(order.dineInAt) && new Date(order.dineInAt).getTime() > Date.now();
 
     return (
       <div
@@ -212,7 +244,7 @@ function KitchenQueue() {
         <div className="kq-card-header">
           <div className="kq-card-title">
             <span className="kq-order-num">Order #{order.orderId}</span>
-            <span className="kq-pos-badge">POS: {orders.indexOf(order) + 1}</span>
+            <span className="kq-pos-badge">POS: {positionIndex ?? (orders.indexOf(order) + 1)}</span>
             {priority && <span className="kq-priority-badge">Priority</span>}
             {late && <span className="kq-late-badge">Late</span>}
           </div>
@@ -265,8 +297,8 @@ function KitchenQueue() {
 
         <div className="kq-card-actions">
           {order.status === 'pending' && (
-            <button className="kq-btn kq-btn-cook" onClick={() => updateOrderStatus(order._id, 'cooking')}>
-              Mark as Cooking
+            <button className="kq-btn kq-btn-cook" onClick={() => updateOrderStatus(order._id, 'accepted')}>
+              {hasFutureDineIn ? 'Accept and Schedule' : 'Accept Order'}
             </button>
           )}
           {['accepted', 'cooking', 'preparing', 'delayed'].includes(order.status) && (
@@ -324,7 +356,7 @@ function KitchenQueue() {
                 {pendingOrders.length === 0 ? (
                   <div className="kq-empty">No pending orders</div>
                 ) : (
-                  (filter === 'all' ? pendingOrders : getFilteredActive().filter(o => o.status === 'pending')).map(renderOrderCard)
+                  (filter === 'all' ? pendingOrders : getFilteredActive().filter(o => o.status === 'pending')).map((order, idx) => renderOrderCard(order, idx + 1))
                 )}
               </div>
             </div>
@@ -342,7 +374,7 @@ function KitchenQueue() {
                 {cookingOrders.length === 0 ? (
                   <div className="kq-empty">No orders cooking</div>
                 ) : (
-                  (filter === 'all' ? cookingOrders : getFilteredActive().filter(o => ['accepted', 'cooking', 'preparing', 'delayed'].includes(o.status))).map(renderOrderCard)
+                  (filter === 'all' ? cookingOrders : getFilteredActive().filter(o => ['accepted', 'cooking', 'preparing', 'delayed'].includes(o.status))).map((order, idx) => renderOrderCard(order, idx + 1))
                 )}
               </div>
             </div>
@@ -360,7 +392,7 @@ function KitchenQueue() {
                 {readyOrders.length === 0 ? (
                   <div className="kq-empty">No orders ready</div>
                 ) : (
-                  readyOrders.map(renderOrderCard)
+                  readyOrders.map((order, idx) => renderOrderCard(order, idx + 1))
                 )}
               </div>
             </div>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useInRouterContext } from 'react-router-dom';
 import axios from 'axios';
 import PublicHome from './pages/public/PublicHome';
 import UserDashboard from './pages/user/UserDashboard';
@@ -12,6 +12,8 @@ import UserOrders from './pages/user/UserOrders';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import PaymentStatus from './pages/user/PaymentStatus';
 import UserSettings from './pages/user/UserSettings';
+import { PWAProvider } from './pwa/PWAProvider';
+import PWAInstallButton from './pwa/PWAInstallButton';
 
 const AUTH_CACHE_TTL_MS = 30000;
 
@@ -116,9 +118,9 @@ function RoleProtectedRoute({ allowedRole, children }) {
   return children;
 }
 
-function App() {
+function AppRoutes() {
   return (
-    <Router>
+    <>
       <Routes>
         <Route
           path="/"
@@ -233,7 +235,22 @@ function App() {
           )}
         />
       </Routes>
-    </Router>
+      <PWAInstallButton />
+    </>
+  );
+}
+
+function App() {
+  const isInsideRouter = useInRouterContext();
+
+  if (isInsideRouter) {
+    return <AppRoutes />;
+  }
+
+  return (
+    <BrowserRouter>
+      <AppRoutes />
+    </BrowserRouter>
   );
 }
 

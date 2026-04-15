@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { BarChart3, ChefHat, ClipboardList, LogOut, MenuSquare, MessagesSquare, Settings } from 'lucide-react';
 import NotificationBell from '../../components/shared/NotificationBell';
-import InstallAppButton from '../../components/shared/InstallAppButton';
+
 import DashboardNavbar from '../../components/shared/DashboardNavbar';
 import { createAppSocket } from '../../config/socket';
 import '../shared/ChatPages.css';
@@ -37,12 +37,17 @@ function RestaurantMessages() {
   };
 
   const loadConversations = async () => {
-    const res = await axios.get('/api/chat/conversations', { withCredentials: true });
-    if (res.data?.success) {
-      setConversations(res.data.data || []);
-      return res.data.data || [];
+    try {
+      const res = await axios.get('/api/chat/conversations', { withCredentials: true });
+      if (res.data?.success) {
+        setConversations(res.data.data || []);
+        return res.data.data || [];
+      }
+      throw new Error(res.data?.message || 'Failed to load conversations');
+    } catch (err) {
+      console.error('Error loading conversations:', err);
+      return [];
     }
-    throw new Error(res.data?.message || 'Failed to load conversations');
   };
 
   const loadMessages = async (otherUserId) => {
@@ -99,7 +104,12 @@ function RestaurantMessages() {
         appendUniqueMessage(incomingMessage);
       }
 
-      await loadConversations();
+      try {
+        await loadConversations();
+      } catch (err) {
+        // Log refresh failure but don't crash
+        console.error('Failed to refresh conversations:', err);
+      }
     });
 
     return () => {
@@ -188,7 +198,6 @@ function RestaurantMessages() {
         rightContent={(
           <>
             <NotificationBell />
-            <InstallAppButton className="install-btn install-app-btn" />
           </>
         )}
       />
@@ -272,11 +281,11 @@ function RestaurantMessages() {
           <div className="chat-page-wrap">
             <div className="chat-sidebar">
               <div className="chat-sidebar-title">Users</div>
-              {conversations.length === 0 ? (
+                  {conversations.length === 0 ? (
                 <div className="chat-empty">No user messages yet</div>
               ) : conversations.map((conversation) => {
-                const user = conversation.otherUser || {};
-                const active = String(selectedUserId) === String(user._id);
+                const user = conversation?.otherUser || {};
+                const active = String(selectedUserId) === String(user?._id);
                 return (
                   <button
                     key={conversation.conversationKey}
@@ -284,8 +293,8 @@ function RestaurantMessages() {
                     className={`chat-list-item ${active ? 'active' : ''}`}
                     onClick={() => handleSelectUser(conversation)}
                   >
-                    <div className="chat-list-name">{user.name || 'User'}</div>
-                    <div className="chat-list-preview">{user.phone ? `Phone: ${user.phone}` : 'Phone: Not provided'}</div>
+                    <div className="chat-list-name">{user?.name || 'User'}</div>
+                    <div className="chat-list-preview">{user?.phone ? `Phone: ${user.phone}` : 'Phone: Not provided'}</div>
                   </button>
                 );
               })}
@@ -297,8 +306,8 @@ function RestaurantMessages() {
               ) : (
                 <>
                   <div className="chat-main-header">
-                    <div>{selectedUser.name || 'User'}</div>
-                    <div className="chat-header-phone">{selectedUser.phone ? `Phone: ${selectedUser.phone}` : 'Phone: Not provided'}</div>
+                    <div>{selectedUser?.name || 'User'}</div>
+                    <div className="chat-header-phone">{selectedUser?.phone ? `Phone: ${selectedUser.phone}` : 'Phone: Not provided'}</div>
                   </div>
                   {error && <div className="chat-error-banner">{error}</div>}
                   <div className="chat-messages">

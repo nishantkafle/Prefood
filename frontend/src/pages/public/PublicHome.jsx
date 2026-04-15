@@ -197,28 +197,28 @@ function PublicHome() {
     try {
       const payload = registerForm.role === 'restaurant'
         ? {
-            name: registerForm.name,
-            email: registerForm.email,
-            password: registerForm.password,
-            role: 'restaurant',
-            restaurantName: registerForm.restaurantName,
-            logo: registerForm.logo,
-            location: registerForm.address,
-            phone: registerForm.phone,
-            cuisineType: registerForm.cuisineType,
-            restaurantType: registerForm.restaurantType,
-            serviceType: registerForm.serviceType,
-            openingTime: registerForm.openingTime,
-            closingTime: registerForm.closingTime
-          }
+          name: registerForm.name,
+          email: registerForm.email,
+          password: registerForm.password,
+          role: 'restaurant',
+          restaurantName: registerForm.restaurantName,
+          logo: registerForm.logo,
+          location: registerForm.address,
+          phone: registerForm.phone,
+          cuisineType: registerForm.cuisineType,
+          restaurantType: registerForm.restaurantType,
+          serviceType: registerForm.serviceType,
+          openingTime: registerForm.openingTime,
+          closingTime: registerForm.closingTime
+        }
         : {
-            name: registerForm.name,
-            email: registerForm.email,
-            location: '',
-            phone: registerForm.phone,
-            password: registerForm.password,
-            role: 'user'
-          };
+          name: registerForm.name,
+          email: registerForm.email,
+          location: '',
+          phone: registerForm.phone,
+          password: registerForm.password,
+          role: 'user'
+        };
 
       const response = await axios.post('/api/auth/register', payload, { withCredentials: true });
 
@@ -283,100 +283,108 @@ function PublicHome() {
       {/* ── HEADER ── */}
       <PublicNavbar onLogin={() => openAuthModal('login')} onRegister={() => openAuthModal('register')} />
 
-      {/* ── FULL WIDTH BANNER ── */}
+      {/* ── MODERN HERO SECTION ── */}
       <section className="ph-banner-section">
         <div className="ph-banner-wrap">
-          {bannerImage ? (
-            <img src={bannerImage} alt="Homepage banner" className="ph-banner-image" />
-          ) : (
-            <div className="ph-banner-placeholder">
-              <div className="ph-hero-tag">
-                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--brand)', display: 'inline-block' }} />
-                Preorder · Skip the wait
-              </div>
-              <h1>Find your next<br />favorite restaurant</h1>
-              <p>Browse menus freely. Sign up in seconds to place a preorder and skip the queue.</p>
+          <div className="ph-banner-placeholder">
+            <div className="ph-hero-tag">
+              <span style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--brand-deep)', display: 'inline-block' }} />
+              Premium Preordering
             </div>
-          )}
+            <h1>The smarter way to dine out</h1>
+            <p>
+              HotStop connects you with the best local restaurants. Browse menus, 
+              preorder your favorites, and enjoy your meal without the wait.
+            </p>
+            <div className="ph-hero-actions" style={{ marginTop: '2rem', display: 'flex', gap: '1rem' }}>
+              <button type="button" className="ph-register-btn" style={{ padding: '14px 32px', fontSize: '16px' }} onClick={() => openAuthModal('register')}>
+                Get Started
+              </button>
+            </div>
+          </div>
+          <img 
+            src="https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&q=80&w=1200" 
+            alt="Modern Restaurant" 
+            className="ph-banner-image" 
+          />
+        </div>
+      </section>
+
+      {/* ── FLOATING SEARCH ── */}
+      <section className="ph-all-search-wrap">
+        <div className="ph-search-wrap">
+          <Search size={20} />
+          <input
+            type="text"
+            placeholder="Search by restaurant name, cuisine, or location..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
       </section>
 
       {/* ── FEATURED SECTION ── */}
       <section className="ph-full-section">
-        <div className="ph-section-container">
-          <div className="ph-section-head">
-            <h2>Featured Restaurants</h2>
-          </div>
-          <div className="ph-grid ph-grid-all">
-            {(featuredRestaurants || []).slice(0, 7).map((restaurant) => (
-              <article className="ph-card" key={restaurant._id}>
-                <div className="ph-card-top">
-                  {restaurant.logo ? (
-                    <img src={restaurant.logo} alt={restaurant.restaurantName} className="ph-logo" />
-                  ) : (
-                    <div className="ph-logo-fallback"><Store size={20} /></div>
-                  )}
-                  <div>
-                    <h3>{restaurant.restaurantName || 'Restaurant'}</h3>
-                    <p>{restaurant.cuisineType || 'Cuisine not set'}</p>
-                  </div>
-                </div>
-                <div className="ph-meta">
-                  <span><MapPin size={13} /> {restaurant.location || 'Location not set'}</span>
-                  <span><Clock3 size={13} /> {restaurant.openingTime && restaurant.closingTime ? `${restaurant.openingTime} – ${restaurant.closingTime}` : 'Hours not set'}</span>
-                </div>
-                <button type="button" className="ph-view-btn" onClick={() => handleViewMenu(restaurant)}>See Menu</button>
-              </article>
-            ))}
-            {!loading && featuredRestaurants.length === 0 && (
-              <div className="ph-empty">No featured restaurants selected by admin yet.</div>
-            )}
-          </div>
+        <div className="ph-section-head">
+          <h2>Featured Restaurants</h2>
+          <span>Handpicked for you</span>
         </div>
-      </section>
-
-      {/* ── SEARCH SECTION ── */}
-      <section className="ph-full-section">
-        <div className="ph-section-container">
-          <div className="ph-search-wrap ph-all-search-wrap">
-            <Search size={16} />
-            <input
-              type="text"
-              placeholder="Search by name, location, or cuisine…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
+        <div className="ph-grid">
+          {(featuredRestaurants || []).slice(0, 8).map((restaurant) => (
+            <article className="ph-card" key={restaurant?._id}>
+              <div className="ph-card-top">
+                {restaurant?.logo ? (
+                  <img src={restaurant.logo} alt={restaurant.restaurantName} className="ph-logo" />
+                ) : (
+                  <div className="ph-logo-fallback"><Store size={32} /></div>
+                )}
+                <div>
+                  <h3>{restaurant?.restaurantName || 'Restaurant'}</h3>
+                  <p>{restaurant?.cuisineType || 'Cuisine not set'}</p>
+                </div>
+              </div>
+              <div className="ph-meta">
+                <span><MapPin size={16} /> {restaurant?.location || 'Location not set'}</span>
+                <span><Clock3 size={16} /> {restaurant?.openingTime && restaurant?.closingTime ? `${restaurant.openingTime} – ${restaurant.closingTime}` : 'Hours not set'}</span>
+              </div>
+              <button type="button" className="ph-view-btn" onClick={() => handleViewMenu(restaurant)}>See Menu</button>
+            </article>
+          ))}
+          {!loading && (!featuredRestaurants || featuredRestaurants.length === 0) && (
+            <div className="ph-empty">No featured restaurants available yet.</div>
+          )}
         </div>
       </section>
 
       {/* ── ALL RESTAURANTS SECTION ── */}
       <section className="ph-full-section">
-        <div className="ph-section-container">
-          <div className="ph-section-head">
-            <h2>All Restaurants</h2>
-          </div>
-          <div className="ph-grid ph-grid-all">
-            {filteredRestaurants.map((restaurant) => (
-              <article className="ph-card" key={restaurant._id}>
-                <div className="ph-card-top">
-                  {restaurant.logo ? (
-                    <img src={restaurant.logo} alt={restaurant.restaurantName} className="ph-logo" />
-                  ) : (
-                    <div className="ph-logo-fallback"><Store size={20} /></div>
-                  )}
-                  <div>
-                    <h3>{restaurant.restaurantName || 'Restaurant'}</h3>
-                    <p>{restaurant.cuisineType || 'Cuisine not set'}</p>
-                  </div>
+        <div className="ph-section-head">
+          <h2>Explore More</h2>
+          <span>Discover local favorites</span>
+        </div>
+        <div className="ph-grid">
+          {filteredRestaurants.map((restaurant) => (
+            <article className="ph-card" key={restaurant._id}>
+              <div className="ph-card-top">
+                {restaurant.logo ? (
+                  <img src={restaurant.logo} alt={restaurant.restaurantName} className="ph-logo" />
+                ) : (
+                  <div className="ph-logo-fallback"><Store size={32} /></div>
+                )}
+                <div>
+                  <h3>{restaurant.restaurantName || 'Restaurant'}</h3>
+                  <p>{restaurant.cuisineType || 'Cuisine not set'}</p>
                 </div>
-                <button type="button" className="ph-view-btn" onClick={() => handleViewMenu(restaurant)}>See Menu</button>
-              </article>
-            ))}
-            {!loading && filteredRestaurants.length === 0 && (
-              <div className="ph-empty">No restaurants match your search.</div>
-            )}
-          </div>
+              </div>
+              <div className="ph-meta">
+                <span><MapPin size={16} /> {restaurant.location || 'Location not set'}</span>
+              </div>
+              <button type="button" className="ph-view-btn" onClick={() => handleViewMenu(restaurant)}>See Menu</button>
+            </article>
+          ))}
+          {!loading && filteredRestaurants.length === 0 && (
+            <div className="ph-empty">No restaurants match your search.</div>
+          )}
         </div>
       </section>
 

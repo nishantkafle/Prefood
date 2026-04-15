@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import axios from 'axios';
-import { ClipboardList, Home, LogOut } from 'lucide-react';
+import { ArrowLeft, ClipboardList, Home, LogOut, Phone, ChefHat, Send, Image as ImageIcon } from 'lucide-react';
 import NotificationBell from '../../components/shared/NotificationBell';
 import UserNavbar from '../../components/shared/UserNavbar';
 import { uploadImageToCloudinary } from '../../utils/cloudinary';
@@ -38,13 +38,18 @@ function UserChats() {
   }, []);
 
   const loadConversations = useCallback(async () => {
-    const res = await axios.get('/api/chat/conversations', { withCredentials: true });
-    if (res.data?.success) {
-      setConversations(res.data.data || []);
-      setError('');
-      return res.data.data || [];
+    try {
+      const res = await axios.get('/api/chat/conversations', { withCredentials: true });
+      if (res.data?.success) {
+        setConversations(res.data.data || []);
+        setError('');
+        return res.data.data || [];
+      }
+      throw new Error(res.data?.message || 'Failed to load conversations');
+    } catch (err) {
+      console.error('Error loading conversations:', err);
+      return [];
     }
-    throw new Error(res.data?.message || 'Failed to load conversations');
   }, []);
 
   const loadMessages = useCallback(async (otherUserId) => {
@@ -134,8 +139,8 @@ function UserChats() {
 
         const nextEntry = known ? {
           ...known,
-          lastMessage: incomingMessage.message,
-          lastMessageAt: incomingMessage.createdAt,
+          lastMessage: incomingMessage?.message || 'New message',
+          lastMessageAt: incomingMessage?.createdAt || new Date().toISOString(),
           lastMessageFromMe: senderId === me
         } : null;
 
@@ -199,7 +204,7 @@ function UserChats() {
   const handleSelectImage = async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    
+
     try {
       setError('');
       setChatLoading(true);
@@ -229,7 +234,7 @@ function UserChats() {
     <div className="dashboard-container">
       <UserNavbar />
       <div className="dashboard-content">
-        <div className="chat-page-wrap">
+        <div className={`chat-page-wrap ${selectedUser ? 'mobile-detail-active' : ''}`}>
           <div className="chat-sidebar">
             <div className="chat-sidebar-title">All Messages</div>
             {conversations.length === 0 ? (
@@ -242,9 +247,19 @@ function UserChats() {
                   key={entry.conversationKey}
                   className={`chat-list-item ${active ? 'active' : ''}`}
                   onClick={() => handleSelectConversation(entry)}
+                  style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', width: '100%', textAlign: 'left', border: 'none', background: active ? '#fff7ed' : 'transparent', borderBottom: '1px solid #f4f4f5', cursor: 'pointer', transition: 'background 0.2s' }}
                 >
-                  <div className="chat-list-name">{entry.otherUser?.restaurantName || entry.otherUser?.name || 'Restaurant'}</div>
-                  <div className="chat-list-preview">{entry.lastMessage}</div>
+                  {entry.otherUser?.logo ? (
+                    <img src={entry.otherUser.logo} alt="" style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: '#fff', border: '1px solid #e4e4e7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {entry.otherUser?.restaurantName ? entry.otherUser.restaurantName[0].toUpperCase() : 'R'}
+                    </div>
+                  )}
+                  <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <div className="chat-list-name" style={{ fontWeight: '600', color: active ? '#ea580c' : '#18181b', fontSize: '14px', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden' }}>{entry?.otherUser?.restaurantName || entry?.otherUser?.name || 'Restaurant'}</div>
+                    <div className="chat-list-preview" style={{ fontSize: '13px', color: '#71717a', whiteSpace: 'nowrap', textOverflow: 'ellipsis', overflow: 'hidden', marginTop: '4px' }}>{entry?.lastMessage || 'Start a conversation'}</div>
+                  </div>
                 </button>
               );
             })}
@@ -255,9 +270,26 @@ function UserChats() {
               <div className="chat-empty-main">Select a conversation to start chatting.</div>
             ) : (
               <>
-                <div className="chat-main-header">{selectedUser.restaurantName || selectedUser.name || 'Restaurant'}</div>
+                <div className="chat-main-header" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid #eaeef4', background: '#fff' }}>
+                  <button className="chat-back-btn mobile-only" onClick={() => setSelectedUser(null)}>
+                    <ArrowLeft size={20} />
+                  </button>
+                  {selectedUser.logo ? (
+                    <img src={selectedUser.logo} alt="Logo" style={{ width: '44px', height: '44px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #fff', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }} />
+                  ) : (
+                    <div style={{ width: '44px', height: '44px', borderRadius: '50%', background: '#f4f4f5', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #e4e4e7' }}>
+                      <ChefHat size={20} color="#71717a" />
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '700', fontSize: '16px', color: '#18181b', marginBottom: '2px' }}>{selectedUser?.restaurantName || selectedUser?.name || 'Restaurant'}</div>
+                    <div style={{ fontSize: '13px', color: '#71717a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Phone size={12} /> {selectedUser?.phone || 'No contact number available'}
+                    </div>
+                  </div>
+                </div>
                 {error && <div className="chat-error-banner">{error}</div>}
-                <div className="chat-messages">
+                <div className="chat-messages" style={{ padding: '20px', background: '#fafafa', flex: 1, overflowY: 'auto' }}>
                   {chatLoading ? (
                     <div className="loading">Loading messages...</div>
                   ) : messages.length === 0 ? (
@@ -265,10 +297,10 @@ function UserChats() {
                   ) : messages.map((message) => {
                     const mine = String(message.senderId) === String(profile?._id);
                     return (
-                      <div key={message._id} className={`chat-bubble-row ${mine ? 'mine' : 'other'}`}>
-                        <div className={`chat-bubble ${mine ? 'mine' : 'other'}`}>
-                          {message.image && <img src={message.image} alt="Chat upload" className="chat-image" />}
-                          {message.message && <div>{message.message}</div>}
+                      <div key={message._id} className={`chat-bubble-row ${mine ? 'mine' : 'other'}`} style={{ display: 'flex', marginBottom: '16px', justifyContent: mine ? 'flex-end' : 'flex-start' }}>
+                        <div className={`chat-bubble ${mine ? 'mine' : 'other'}`} style={{ maxWidth: '75%', padding: '12px 16px', borderRadius: '16px', fontSize: '14.5px', lineHeight: '1.4', background: mine ? 'var(--brand)' : '#ffffff', color: mine ? '#fff' : '#18181b', borderBottomRightRadius: mine ? '4px' : '16px', borderBottomLeftRadius: mine ? '16px' : '4px', boxShadow: mine ? '0 4px 12px rgba(234, 88, 12, 0.2)' : '0 2px 8px rgba(0,0,0,0.05)', border: mine ? 'none' : '1px solid #f4f4f5' }}>
+                          {message.image && <img src={message.image} alt="Chat upload" className="chat-image" style={{ borderRadius: '8px', marginBottom: message.message ? '8px' : '0', width: '100%', maxWidth: '240px' }} />}
+                          {message.message && <div style={{ wordBreak: 'break-word' }}>{message.message}</div>}
                         </div>
                       </div>
                     );
@@ -276,27 +308,34 @@ function UserChats() {
                   <div ref={messagesEndRef} />
                 </div>
                 {selectedImage && (
-                  <div className="chat-image-preview-wrap">
-                    <img src={selectedImage} alt="Preview" className="chat-image-preview" />
-                    <button type="button" onClick={() => { setSelectedImage(''); if (fileInputRef.current) fileInputRef.current.value = ''; }}>Remove</button>
+                  <div className="chat-image-preview-wrap" style={{ padding: '12px 20px', background: '#fff', borderTop: '1px solid #eaeef4', display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+                    <div style={{ position: 'relative' }}>
+                      <img src={selectedImage} alt="Preview" className="chat-image-preview" style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '8px', border: '2px solid var(--brand)' }} />
+                      <button type="button" onClick={() => { setSelectedImage(''); if (fileInputRef.current) fileInputRef.current.value = ''; }} style={{ position: 'absolute', top: '-8px', right: '-8px', background: '#ef4444', color: '#fff', border: 'none', borderRadius: '50%', width: '24px', height: '24px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>×</button>
+                    </div>
                   </div>
                 )}
-                <div className="chat-input-row">
+                <div className="chat-input-row" style={{ padding: '16px 20px', background: '#fff', borderTop: '1px solid #eaeef4', display: 'flex', gap: '12px', alignItems: 'center', borderRadius: '0 0 8px 8px' }}>
                   <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleSelectImage} />
-                  <button type="button" onClick={() => fileInputRef.current?.click()}>Image</button>
+                  <button type="button" onClick={() => fileInputRef.current?.click()} style={{ background: '#f4f4f5', border: 'none', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#71717a', cursor: 'pointer', transition: 'all 0.2s', padding: 0 }} title="Send Image">
+                    <ImageIcon size={20} />
+                  </button>
                   <input
                     type="text"
                     value={draft}
                     onChange={(e) => setDraft(e.target.value)}
-                    placeholder="Type message..."
+                    placeholder="Type your message..."
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleSend();
                     }}
+                    style={{ flex: 1, padding: '14px 20px', border: '1px solid #e4e4e7', borderRadius: '24px', fontSize: '15px', background: '#f8fafc', outline: 'none' }}
                   />
-                  <button type="button" onClick={handleSend}>Send</button>
+                  <button type="button" onClick={handleSend} disabled={!draft.trim() && !selectedImage} style={{ background: (draft.trim() || selectedImage) ? 'var(--brand)' : '#fdba74', color: '#fff', border: 'none', width: '44px', height: '44px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: (draft.trim() || selectedImage) ? 'pointer' : 'not-allowed', transition: 'all 0.2s', padding: 0, boxShadow: '0 4px 12px rgba(234, 88, 12, 0.2)' }}>
+                    <Send size={18} style={{ marginLeft: '2px' }} />
+                  </button>
                 </div>
                 {!conversationMap.has(String(selectedUserId)) && (
-                  <div className="chat-hint">This chat will appear in All Messages after first message is sent.</div>
+                  <div className="chat-hint" style={{ textAlign: 'center', padding: '12px', fontSize: '12px', color: '#a1a1aa' }}>This conversation will be saved once your first message is sent.</div>
                 )}
               </>
             )}

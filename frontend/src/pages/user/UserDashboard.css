@@ -1,0 +1,356 @@
+/* UserDashboard.css */
+
+.ud-page, .um-page {
+  min-height: 100vh;
+  background-color: var(--bg-sub);
+}
+
+/* Hero Section */
+.ud-hero, .um-hero {
+  background: var(--bg-main) !important;
+  border-bottom: 1px solid var(--border-light) !important;
+  padding: 40px 60px !important;
+  position: relative;
+  overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .ud-hero, .um-hero {
+    padding: 30px 20px !important;
+  }
+}
+
+.ud-hero-content h1, .um-hero-content h1 {
+  font-size: 2.5rem !important;
+  font-weight: 800 !important;
+  color: var(--text-main) !important;
+  margin: 12px 0 16px 0 !important;
+  line-height: 1.2 !important;
+}
+
+@media (max-width: 768px) {
+  .ud-hero-content h1, .um-hero-content h1 {
+    font-size: 1.8rem !important;
+  }
+}
+
+.ud-hero-badge, .um-hero-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  background: var(--brand-light);
+  color: var(--brand);
+  border-radius: 99px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border: 1px solid rgba(234, 88, 12, 0.1);
+}
+
+/* Restaurant Grid */
+.ud-restaurant-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
+  padding: 20px 0;
+}
+
+@media (max-width: 768px) {
+  .ud-restaurant-grid {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+.ud-restaurant-card {
+  background: var(--bg-main);
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
+
+.ud-restaurant-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--brand);
+}
+
+/* Menu View Layout */
+.um-body {
+  display: flex;
+  gap: 30px;
+  padding: 30px 40px;
+  max-width: 1440px;
+  margin: 0 auto;
+}
+
+@media (max-width: 1024px) {
+  .um-body {
+    flex-direction: column;
+    padding: 20px;
+  }
+}
+
+.um-filter-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 100px;
+  height: fit-content;
+}
+
+@media (max-width: 1024px) {
+  .um-filter-sidebar {
+    width: 100%;
+    position: relative;
+    top: 0;
+    overflow-x: auto;
+  }
+  
+  .um-filter-list {
+    display: flex !important;
+    gap: 12px;
+    padding-bottom: 10px;
+  }
+  
+  .um-filter-item {
+    white-space: nowrap;
+    padding: 8px 16px !important;
+  }
+}
+
+.um-menu-center {
+  flex: 1;
+  min-width: 0;
+}
+
+.um-cart-panel {
+  width: 360px;
+  flex-shrink: 0;
+  background: var(--bg-main);
+  border-radius: 24px;
+  border: 1px solid var(--border-light);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 100px;
+  height: calc(100vh - 120px);
+  box-shadow: var(--shadow-md);
+}
+
+@media (max-width: 1024px) {
+  .um-cart-panel {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 80vh;
+    z-index: 2000;
+    border-radius: 24px 24px 0 0;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .um-cart-panel.mobile-active {
+    transform: translateY(0);
+  }
+}
+
+/* Food Cards */
+.um-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .um-menu-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.um-food-card {
+  background: var(--bg-main);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  transition: all 0.3s ease;
+}
+
+.um-food-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.um-food-img {
+  height: 180px;
+  position: relative;
+}
+
+.um-food-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Floating Cart Button for Mobile */
+.mobile-cart-toggle {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  background: var(--brand);
+  color: white;
+  padding: 12px 24px;
+  border-radius: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  box-shadow: 0 4px 20px rgba(234, 88, 12, 0.4);
+  z-index: 1500;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.mobile-cart-toggle:active {
+  transform: scale(0.95);
+}
+
+.cart-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  z-index: 1900;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.cart-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Section Header & Dashboard Actions */
+.ud-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 20px;
+}
+
+@media (max-width: 768px) {
+  .ud-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+}
+
+.ud-section-title h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.ud-section-title p {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.ud-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+@media (max-width: 768px) {
+  .ud-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+.ud-location-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg-main);
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+.ud-location-info h5 {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.ud-location-info p {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ud-location-change {
+  background: none;
+  border: none;
+  color: var(--brand);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background 0.2s;
+}
+
+.ud-location-change:hover {
+  background: var(--brand-light);
+}
+
+.nearby-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  background: var(--bg-main);
+  border: 1px solid var(--border-light);
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.nearby-toggle-btn:hover {
+  border-color: var(--brand);
+  color: var(--brand);
+  background: var(--brand-light);
+}
+
+.nearby-toggle-btn.active {
+  background: var(--brand);
+  color: white;
+  border-color: var(--brand);
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
+}

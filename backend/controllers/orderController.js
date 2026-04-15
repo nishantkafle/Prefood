@@ -104,7 +104,7 @@ const syncScheduledOrdersForRestaurant = async (restaurantId) => {
         { _id: { $in: dueOrderIds } },
         {
             $set: {
-                status: 'pending',
+                status: 'cooking',
                 updatedAt: new Date()
             }
         }
@@ -357,7 +357,7 @@ export const getOrderForCustomer = async (req, res) => {
         if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
 
         if (shouldReleaseScheduledOrder(order)) {
-            order.status = 'pending';
+            order.status = 'cooking';
             await order.save();
         }
 
@@ -387,7 +387,7 @@ export const getOrdersForCustomer = async (req, res) => {
                 { _id: { $in: dueOrderIds } },
                 {
                     $set: {
-                        status: 'pending',
+                        status: 'cooking',
                         updatedAt: new Date()
                     }
                 }

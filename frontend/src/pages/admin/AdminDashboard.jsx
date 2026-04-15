@@ -154,10 +154,10 @@ function AdminDashboard() {
         axios.get(`${API}/admin/restaurants`, { withCredentials: true }),
         axios.get(`${API}/admin/home-banner`, { withCredentials: true })
       ]);
-      if (statsRes.data.success) setStats(statsRes.data.data);
-      if (usersRes.data.success) setUsers(usersRes.data.data);
-      if (restsRes.data.success) setRestaurants(restsRes.data.data);
-      if (bannerRes.data.success) {
+      if (statsRes.data?.success) setStats(statsRes.data.data || { totalUsers: 0, totalRestaurants: 0 });
+      if (usersRes.data?.success) setUsers(usersRes.data.data || []);
+      if (restsRes.data?.success) setRestaurants(restsRes.data.data || []);
+      if (bannerRes.data?.success) {
         const banner = bannerRes.data?.data?.bannerImage || '';
         setHomeBanner(banner);
         setBannerDraft(banner);
@@ -282,7 +282,7 @@ function AdminDashboard() {
     }
   };
 
-  const featuredCount = restaurants.filter((r) => !!r.isFeaturedHome).length;
+  const featuredCount = (restaurants || []).filter((r) => !!r?.isFeaturedHome).length;
 
   return (
     <div className="admin-wrapper">

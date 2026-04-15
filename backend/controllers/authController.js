@@ -102,6 +102,10 @@ export const login = async (req, res) => {
             return res.json({ success: false, message: 'Invalid role for this account' })
         }
 
+        if (user.isActive === false) {
+            return res.json({ success: false, message: 'Your account is disabled contact to costumer care' })
+        }
+
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {

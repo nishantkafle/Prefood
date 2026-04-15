@@ -16,13 +16,35 @@ import { initSocket } from './utils/socket.js';
 const app = express();
 const port = process.env.PORT || 4000
 
+const normalizeOrigin = (origin = '') => String(origin).trim().replace(/\/$/, '');
+
+const configuredOrigins = [
+  ...(process.env.CORS_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean),
+  process.env.FRONTEND_URL
+]
+  .filter(Boolean)
+  .map(normalizeOrigin);
+
+const staticAllowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001'
+];
+
+const allowedOrigins = new Set([...configuredOrigins, ...staticAllowedOrigins].map(normalizeOrigin));
+
+const isAllowedDevLanOrigin = (origin = '') => {
+  return /^http:\/\/(\d{1,3}\.){3}\d{1,3}:(3000|3001)$/i.test(normalizeOrigin(origin));
+};
+
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use(cors({
   origin: function(origin, callback) {
-    const allowed = ['http://localhost:3000', 'http://localhost:3001', 'http://172.16.17.10:3000'];
-    if (!origin || allowed.includes(origin)) {
+    const normalized = normalizeOrigin(origin || '');
+    if (!origin || allowedOrigins.has(normalized) || isAllowedDevLanOrigin(normalized)) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));

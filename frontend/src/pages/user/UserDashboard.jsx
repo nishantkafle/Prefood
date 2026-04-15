@@ -6,6 +6,7 @@ import { createAppSocket } from '../../config/socket';
 import NotificationBell from '../../components/shared/NotificationBell';
 import UserNavbar from '../../components/shared/UserNavbar';
 import '../shared/Dashboard.css';
+import './UserDashboard.css';
 
 const getCurrentLocalDateTimeValue = () => {
   const now = new Date();
@@ -40,6 +41,7 @@ function UserDashboard() {
   const [nearbyActive, setNearbyActive] = useState(false);
   const [locating, setLocating] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [showMobileCart, setShowMobileCart] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -52,10 +54,10 @@ function UserDashboard() {
   const fetchProfile = async () => {
     try {
       const response = await axios.get('/api/auth/profile', { withCredentials: true });
-      if (response.data.success) {
+      if (response.data?.success && response.data?.data) {
         setProfile(response.data.data);
         // Set initial location from profile if available
-        if (response.data.data.latitude && response.data.data.longitude) {
+        if (response.data.data?.latitude && response.data.data?.longitude) {
           setUserLocation({
             lat: parseFloat(response.data.data.latitude),
             lng: parseFloat(response.data.data.longitude),
@@ -85,8 +87,8 @@ function UserDashboard() {
         params,
         withCredentials: true 
       });
-      if (response.data.success) {
-        setRestaurants(response.data.data);
+      if (response.data?.success) {
+        setRestaurants(response.data.data || []);
       }
     } catch (err) {
       console.error('Error fetching restaurants:', err);
@@ -147,8 +149,8 @@ function UserDashboard() {
     setOrderSuccess(false);
     try {
       const response = await axios.get(`/api/auth/restaurant/${restaurant._id}/menu`, { withCredentials: true });
-      if (response.data.success) {
-        setMenuItems(response.data.data.menuItems);
+      if (response.data?.success && response.data?.data) {
+        setMenuItems(response.data.data.menuItems || []);
       }
     } catch (err) {
       console.error('Error fetching menu:', err);
@@ -412,43 +414,42 @@ function UserDashboard() {
     };
   }, [selectedRestaurant?._id]);
 
-  // Menu view for a selected restaurant
   if (selectedRestaurant) {
     return (
       <div className="um-page">
         <UserNavbar />
-        <div className="um-hero" style={{ 
-          background: '#ffffff',
-          minHeight: 'auto',
-          height: 'auto',
-          padding: '30px 40px',
-          borderBottom: '1px solid #eaeef4',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          gap: '20px'
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-            <button className="um-back-btn" onClick={handleBackToList} style={{ position: 'relative', top: 0, left: 0, margin: 0, background: '#f8fafc', color: '#334155', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+        <div className="um-hero">
+          <div className="um-top-nav">
+            <button className="um-back-btn" onClick={handleBackToList}>
               <ArrowLeft size={18} />
               <span>Back</span>
             </button>
             <button 
+              className="um-chat-btn"
               onClick={handleChatWithRestaurant}
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'var(--brand)', color: 'white', borderRadius: '8px', fontWeight: '600', border: 'none', cursor: 'pointer' }}
             >
               <MessageSquare size={18} />
-              Message Restaurant
+              <span className="desktop-only">Message Restaurant</span>
             </button>
           </div>
-          <div className="um-hero-content" style={{ position: 'relative', top: 0, marginTop: '10px', paddingTop: 0, paddingBottom: 0, alignSelf: 'flex-start' }}>
-            <div className="um-hero-badge" style={{ background: '#fff7ed', color: '#ea580c', border: '1px solid #ffedd5' }}>Restaurant</div>
-            <h1 style={{ color: '#0f172a', margin: '12px 0 16px 0', fontSize: '32px' }}>{selectedRestaurant.restaurantName || 'Restaurant'}</h1>
-            <div className="um-hero-meta" style={{ color: '#475569', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-              {selectedRestaurant.location && <span style={{ background: '#f1f5f9', color: '#475569', padding: '8px 16px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500' }}><MapPin size={16} /> {selectedRestaurant.location}</span>}
-              {selectedRestaurant.cuisineType && <span style={{ background: '#f1f5f9', color: '#475569', padding: '8px 16px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500' }}><UtensilsCrossed size={16} /> {selectedRestaurant.cuisineType}</span>}
+          <div className="um-hero-content">
+            <div className="um-hero-badge">Restaurant</div>
+            <h1>{selectedRestaurant.restaurantName || 'Restaurant'}</h1>
+            <div className="um-hero-meta">
+              {selectedRestaurant.location && (
+                <span className="um-meta-pill">
+                  <MapPin size={16} /> {selectedRestaurant.location}
+                </span>
+              )}
+              {selectedRestaurant.cuisineType && (
+                <span className="um-meta-pill">
+                  <UtensilsCrossed size={16} /> {selectedRestaurant.cuisineType}
+                </span>
+              )}
               {selectedRestaurant.openingTime && selectedRestaurant.closingTime && (
-                <span style={{ background: '#f1f5f9', color: '#475569', padding: '8px 16px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '500' }}><Clock3 size={16} /> {selectedRestaurant.openingTime} - {selectedRestaurant.closingTime}</span>
+                <span className="um-meta-pill">
+                  <Clock3 size={16} /> {selectedRestaurant.openingTime} - {selectedRestaurant.closingTime}
+                </span>
               )}
             </div>
           </div>
@@ -456,25 +457,23 @@ function UserDashboard() {
 
         <div className="um-body">
           <div className="um-filter-sidebar">
-            <div className="um-filter-header">
+            <div className="um-filter-header desktop-only">
               <h3>Menu Categories</h3>
             </div>
             <div className="um-filter-list">
               {[
-                { id: 'all', label: 'All Items', color: '#64748b' },
-                { id: 'veg', label: 'Vegetarian', color: '#10b981' },
-                { id: 'non-veg', label: 'Non-Vegetarian', color: '#ef4444' },
+                { id: 'all', label: 'All', color: '#64748b' },
+                { id: 'veg', label: 'Veg', color: '#10b981' },
+                { id: 'non-veg', label: 'Non-Veg', color: '#ef4444' },
                 { id: 'vegan', label: 'Vegan', color: '#84cc16' }
               ].map(f => (
                 <div 
                   key={f.id}
-                  className={`um-filter-item ${activeFilters.includes(f.id) ? 'active' : f.id}`} 
+                  className={`um-filter-item ${activeFilters.includes(f.id) ? 'active' : ''}`} 
                   onClick={() => handleFilterToggle(f.id)}
                 >
-                  <div className="um-filter-item-info">
-                    <span className="um-filter-dot" style={{ backgroundColor: f.color }}></span>
-                    <span className="um-filter-label">{f.label}</span>
-                  </div>
+                  <span className="um-filter-dot" style={{ backgroundColor: f.color }}></span>
+                  <span className="um-filter-label">{f.label}</span>
                 </div>
               ))}
             </div>
@@ -484,7 +483,7 @@ function UserDashboard() {
             <div className="um-menu-topbar">
               <div className="um-menu-info-text">
                 <h2>Explore Menu</h2>
-                <p>{filteredMenu.length} dishes found</p>
+                <p>{filteredMenu.length} dishes</p>
               </div>
               <div className="um-menu-actions">
                 <div className="um-menu-search">
@@ -496,7 +495,7 @@ function UserDashboard() {
                     onChange={(e) => setMenuSearchQuery(e.target.value)}
                   />
                 </div>
-                <div className="um-view-toggle">
+                <div className="um-view-toggle desktop-only">
                   <button className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')}>Grid</button>
                   <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
                 </div>
@@ -506,13 +505,12 @@ function UserDashboard() {
             {menuLoading ? (
               <div className="um-loading-state">
                 <div className="um-spinner"></div>
-                <p>Curating the best dishes for you...</p>
+                <p>Loading menu...</p>
               </div>
             ) : filteredMenu.length === 0 ? (
               <div className="um-empty-state">
                 <Search size={48} />
-                <h3>No dishes match your search</h3>
-                <p>Try adjusting your filters or search query</p>
+                <h3>No dishes found</h3>
               </div>
             ) : (
               <div className={`um-menu-grid ${viewMode === 'list' ? 'um-menu-list-view' : ''}`}>
@@ -537,15 +535,14 @@ function UserDashboard() {
                         <div className="um-food-name-row">
                           <h3>{item.name}</h3>
                           <div className="um-food-meta-icons">
-                            <span title={`Prep time: ${item.prepTime} mins`}><Clock3 size={12} /> {item.prepTime}m</span>
+                            <span><Clock3 size={12} /> {item.prepTime}m</span>
                           </div>
                         </div>
                         <p className="um-food-desc">{item.description}</p>
                         
                         <div className="um-food-bottom">
                           <div className="um-food-price">
-                            <span className="currency">NPR</span>
-                            <span className="amount">{item.price}</span>
+                            <span className="amount">NPR {item.price}</span>
                           </div>
                           
                           {isOutOfStock ? (
@@ -570,7 +567,8 @@ function UserDashboard() {
             )}
           </div>
 
-          <div className="um-cart-panel">
+          <div className={`cart-overlay ${showMobileCart ? 'active' : ''}`} onClick={() => setShowMobileCart(false)} />
+          <div className={`um-cart-panel ${showMobileCart ? 'mobile-active' : ''}`}>
             <div className="um-cart-header">
               <div className="um-cart-header-title">
                 <ShoppingBag size={20} />
@@ -581,6 +579,7 @@ function UserDashboard() {
                 {cart.length > 0 && (
                   <button className="um-cart-clear-btn" onClick={clearCart} title="Clear Cart"><Trash2 size={16} /></button>
                 )}
+                <button className="mobile-only um-cart-close" onClick={() => setShowMobileCart(false)}>×</button>
               </div>
             </div>
 
@@ -588,7 +587,7 @@ function UserDashboard() {
               {orderSuccess && (
                 <div className="um-status-alert success">
                   <Info size={16} />
-                  <span>Pre-order placed successfully!</span>
+                  <span>Order placed successfully!</span>
                 </div>
               )}
               {orderError && (
@@ -601,8 +600,7 @@ function UserDashboard() {
               {cart.length === 0 ? (
                 <div className="um-cart-empty-state">
                   <ShoppingBag size={40} />
-                  <p>Your cart is hungry</p>
-                  <span>Add some delicious items from the menu to get started</span>
+                  <p>Your cart is empty</p>
                 </div>
               ) : (
                 <div className="um-cart-items-list">
@@ -635,10 +633,6 @@ function UserDashboard() {
 
             <div className="um-cart-footer">
               <div className="um-cart-summary">
-                <div className="um-summary-row">
-                  <span>Subtotal</span>
-                  <span>NPR {getCartTotal()}</span>
-                </div>
                 <div className="um-summary-row total">
                   <span>Total Amount</span>
                   <span>NPR {getCartTotal()}</span>
@@ -647,7 +641,7 @@ function UserDashboard() {
 
               <div className="um-checkout-form">
                 <div className="um-field">
-                  <label><Clock3 size={14} /> Arrival Time</label>
+                  <label><Clock size={14} /> Arrival Time</label>
                   <input
                     type="datetime-local"
                     value={dineInAt}
@@ -658,21 +652,19 @@ function UserDashboard() {
                 </div>
                 
                 <div className="um-field">
-                  <label>Payment Mode</label>
+                  <label>Payment</label>
                   <div className="um-payment-grid">
                     <div 
                       className={`um-payment-card ${paymentMethod === 'esewa' ? 'active' : ''}`}
                       onClick={() => setPaymentMethod('esewa')}
                     >
-                      <div className="um-radio"></div>
-                      <span>eSewa App</span>
+                      <span>eSewa</span>
                     </div>
                     <div 
                       className={`um-payment-card ${paymentMethod === 'cash' ? 'active' : ''}`}
                       onClick={() => setPaymentMethod('cash')}
                     >
-                      <div className="um-radio"></div>
-                      <span>Pay at Counter</span>
+                      <span>Cash</span>
                     </div>
                   </div>
                 </div>
@@ -682,12 +674,20 @@ function UserDashboard() {
                   onClick={handlePlacePreOrder} 
                   disabled={cart.length === 0}
                 >
-                  {paymentMethod === 'esewa' ? 'Pay & Place Order' : 'Place Pre-Order'}
+                  {paymentMethod === 'esewa' ? 'Pay & Order' : 'Place Order'}
                 </button>
               </div>
             </div>
           </div>
         </div>
+
+        {cart.length > 0 && !showMobileCart && (
+          <button className="mobile-cart-toggle mobile-only" onClick={() => setShowMobileCart(true)}>
+            <ShoppingBag size={20} />
+            <span>Cart ({getCartItemCount()})</span>
+            <span style={{ marginLeft: 'auto' }}>NPR {getCartTotal()}</span>
+          </button>
+        )}
       </div>
     );
   }
@@ -703,13 +703,13 @@ function UserDashboard() {
           <div className="ud-hero-content">
             <span className="ud-hero-badge">Discover & Reserve</span>
             <h1>Find your next favorite meal</h1>
-            <p>Explore the best restaurants in town and pre-order your favorite dishes.</p>
+            <p className="desktop-only">Explore the best restaurants in town and pre-order your favorite dishes.</p>
             
             <div className={`ud-search-box ${searchQuery ? 'active' : ''}`}>
               <Search size={18} className="ud-search-icon" />
               <input
                 type="text"
-                placeholder="Search restaurants or locations..."
+                placeholder="Search restaurants..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -718,40 +718,37 @@ function UserDashboard() {
               )}
             </div>
           </div>
-          <div className="ud-hero-bg-accent"></div>
         </div>
 
         <div className="ud-body">
           <div className="ud-section-header">
-            <div>
+            <div className="ud-section-title">
               <h2>Premium Restaurants</h2>
-              <p>Hand-picked dining experiences for you</p>
+              <p>Hand-picked dining experiences</p>
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <div className="ud-header-actions">
               {profile?.location && (
                 <div className="ud-location-banner">
                   <MapPin size={18} color="var(--brand)" />
                   <div className="ud-location-info">
-                    <h5>Current Location</h5>
+                    <h5>Location</h5>
                     <p>{profile.location}</p>
                   </div>
                   <button className="ud-location-change" onClick={() => navigate('/user/settings')}>
-                    Change
+                    Edit
                   </button>
                 </div>
               )}
 
-              <div className="discovery-actions">
-                <button 
-                  className={`nearby-toggle-btn ${nearbyActive ? 'active' : ''}`}
-                  onClick={toggleNearby}
-                  disabled={locating}
-                >
-                  <MapPin size={16} />
-                  {locating ? 'Locating...' : nearbyActive ? 'Showing within 1km' : 'Search Near Me'}
-                </button>
-              </div>
+              <button 
+                className={`nearby-toggle-btn ${nearbyActive ? 'active' : ''}`}
+                onClick={toggleNearby}
+                disabled={locating}
+              >
+                <MapPin size={16} />
+                <span>{locating ? 'Searching...' : nearbyActive ? 'Nearby' : 'Near Me'}</span>
+              </button>
             </div>
           </div>
 
@@ -763,28 +760,16 @@ function UserDashboard() {
           ) : filteredRestaurants.length === 0 ? (
             <div className="ud-empty">
               <ChefHat size={48} />
-              <h3>{nearbyActive ? "No restaurants found nearby" : "No restaurants found"}</h3>
-              {nearbyActive ? (
-                <p>There is no any hotel registered in this app near your location. (1km radius)</p>
-              ) : (
-                <p>Try searching for something else or browse all restaurants.</p>
-              )}
+              <h3>{nearbyActive ? "No restaurants found nearby" : "No results found"}</h3>
+              <p>{nearbyActive ? "No hotels registered within 1km radius." : "Try a different search term."}</p>
               <button 
+                className="ud-clear-btn"
                 onClick={() => { 
                   setSearchQuery(''); 
                   if(nearbyActive) toggleNearby(); 
                 }} 
-                style={{
-                  marginTop: '16px',
-                  padding: '8px 16px',
-                  borderRadius: '8px',
-                  border: '1px solid #e7e5e4',
-                  background: 'white',
-                  cursor: 'pointer',
-                  fontWeight: '600'
-                }}
               >
-                Clear Search
+                Clear Filters
               </button>
             </div>
           ) : (
@@ -828,7 +813,7 @@ function UserDashboard() {
                     </div>
                     
                     <div className="ud-card-footer">
-                      <div className="ud-card-btn">View Menu</div>
+                      <div className="ud-card-btn">Order Now</div>
                       {restaurant.distance !== undefined && restaurant.distance !== null && (
                         <div className="ud-distance-tag">
                           {restaurant.distance < 1 

@@ -2,11 +2,42 @@ import { Server } from 'socket.io';
 
 let io = null;
 
+const normalizeOrigin = (origin = '') => String(origin).trim().replace(/\/$/, '');
+
+const configuredOrigins = [
+  ...(process.env.CORS_ORIGINS || '').split(',').map((origin) => origin.trim()).filter(Boolean),
+  process.env.FRONTEND_URL
+]
+  .filter(Boolean)
+  .map(normalizeOrigin);
+
+const staticAllowedOrigins = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001'
+];
+
+const allowedOrigins = new Set([...configuredOrigins, ...staticAllowedOrigins].map(normalizeOrigin));
+
+const isAllowedDevLanOrigin = (origin = '') => {
+  return /^http:\/\/(\d{1,3}\.){3}\d{1,3}:(3000|3001)$/i.test(normalizeOrigin(origin));
+};
+
+const socketOriginValidator = (origin, callback) => {
+  const normalized = normalizeOrigin(origin || '');
+  if (!origin || allowedOrigins.has(normalized) || isAllowedDevLanOrigin(normalized)) {
+    callback(null, true);
+    return;
+  }
+  callback(new Error('Not allowed by CORS'));
+};
+
 export const initSocket = (server) => {
   if (io) return io;
   io = new Server(server, {
     cors: {
-      origin: ['http://localhost:3000', 'http://localhost:3001'],
+      origin: socketOriginValidator,
       credentials: true
     }
   });

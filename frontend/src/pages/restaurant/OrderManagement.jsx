@@ -239,7 +239,7 @@ function OrderManagement() {
       );
     }
 
-    return filtered;
+    return [...filtered].sort(sortOrdersForKitchenFlow);
   };
 
   const getTabCount = (tab) => {
@@ -272,6 +272,31 @@ function OrderManagement() {
     if (!Number.isFinite(dineInAt)) return null;
     const prepMinutes = Math.max(1, Number(order.estimatedTime) || 0);
     return new Date(dineInAt - prepMinutes * 60 * 1000).toISOString();
+  };
+
+  const getComparableTimestamp = (value, fallback = 0) => {
+    const ts = new Date(value).getTime();
+    return Number.isFinite(ts) ? ts : fallback;
+  };
+
+  const sortOrdersForKitchenFlow = (a, b) => {
+    const aScheduled = Boolean(a.dineInAt);
+    const bScheduled = Boolean(b.dineInAt);
+
+    // Scheduled orders are prioritized in kitchen flow.
+    if (aScheduled !== bScheduled) {
+      return aScheduled ? -1 : 1;
+    }
+
+    if (aScheduled && bScheduled) {
+      const aRelease = getComparableTimestamp(getScheduleReleaseTime(a), Number.MAX_SAFE_INTEGER);
+      const bRelease = getComparableTimestamp(getScheduleReleaseTime(b), Number.MAX_SAFE_INTEGER);
+      if (aRelease !== bRelease) return aRelease - bRelease;
+    }
+
+    const aCreated = getComparableTimestamp(a.createdAt, Number.MAX_SAFE_INTEGER);
+    const bCreated = getComparableTimestamp(b.createdAt, Number.MAX_SAFE_INTEGER);
+    return aCreated - bCreated;
   };
 
   const getStatusBadgeClass = (status) => {
@@ -310,7 +335,7 @@ function OrderManagement() {
         return (
           <>
             <button className="action-btn reject" onClick={() => handleUpdateStatus(order._id, 'cancelled')}>Cancel</button>
-            <button className="action-btn accept" onClick={() => handleUpdateStatus(order._id, 'pending')}>Move to Queue</button>
+            <button className="action-btn accept" onClick={() => handleUpdateStatus(order._id, 'cooking')}>Start Cooking Now</button>
           </>
         );
       case 'accepted':

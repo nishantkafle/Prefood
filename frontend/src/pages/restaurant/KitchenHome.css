@@ -1,0 +1,327 @@
+/* KitchenHome.css */
+
+.kh-home-page {
+  padding: 2rem;
+  background-color: #f7f9fc;
+  min-height: 100vh;
+  font-family: 'Inter', sans-serif;
+  color: #1a1f36;
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.content-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+}
+
+.breadcrumb {
+  font-size: 0.85rem;
+  color: #8792a2;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.5rem;
+}
+
+.content-header h1 {
+  font-size: 2rem;
+  margin: 0;
+  font-weight: 700;
+  color: #111827;
+  letter-spacing: -0.5px;
+}
+
+.subtitle {
+  color: #6b7280;
+  margin: 0.25rem 0 0;
+  font-size: 0.95rem;
+}
+
+.kh-date-filter {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.kh-date-filter label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #4b5563;
+}
+
+.kh-date-filter input[type="date"] {
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background-color: #ffffff;
+  color: #374151;
+  font-size: 0.95rem;
+  font-family: inherit;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  transition: all 0.2s ease;
+}
+
+.kh-date-filter input[type="date"]:hover,
+.kh-date-filter input[type="date"]:focus {
+  border-color: #ff6b00;
+  outline: none;
+  box-shadow: 0 4px 6px rgba(255, 107, 0, 0.1);
+}
+
+/* KPI Cards */
+.kh-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.kh-card {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.kh-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
+}
+
+.kh-card p {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #6b7280;
+  margin: 0 0 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.kh-card h3 {
+  font-size: 2.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: #111827;
+  line-height: 1;
+}
+
+.kh-card-accent {
+  background: linear-gradient(135deg, #ff6b00 0%, #ff8c00 100%);
+  color: white;
+  border: none;
+}
+
+.kh-card-accent p,
+.kh-card-accent h3 {
+  color: white;
+}
+
+.kh-card-accent p {
+  opacity: 0.9;
+}
+
+/* Panels */
+.kh-panel {
+  background: white;
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  border: 1px solid rgba(229, 231, 235, 0.5);
+  margin-bottom: 2rem;
+}
+
+.kh-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid #f3f4f6;
+  padding-bottom: 1rem;
+}
+
+.kh-panel-head h3 {
+  font-size: 1.25rem;
+  margin: 0;
+  color: #111827;
+  font-weight: 700;
+}
+
+.kh-panel-head span {
+  font-size: 0.85rem;
+  color: #ff6b00;
+  font-weight: 600;
+  background-color: rgba(255, 107, 0, 0.1);
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+}
+
+/* Selected Date Grid layout */
+.kh-selected-grid-full {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.kh-mini-stat {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f9fafb;
+  border-radius: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.kh-mini-stat:hover {
+  background-color: #f3f4f6;
+}
+
+.kh-mini-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background-color: white;
+  border-radius: 12px;
+  color: #ff6b00;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.kh-mini-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.kh-mini-value {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Table */
+.kh-table-wrap {
+  overflow-x: auto;
+}
+
+.kh-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.kh-table th,
+.kh-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.kh-table th {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #6b7280;
+  font-weight: 600;
+  background-color: #f9fafb;
+}
+
+.kh-table th:first-child {
+  border-top-left-radius: 8px;
+}
+
+.kh-table th:last-child {
+  border-top-right-radius: 8px;
+}
+
+.kh-table tbody tr {
+  transition: background-color 0.2s ease;
+}
+
+.kh-table tbody tr:hover {
+  background-color: #f9fafb;
+}
+
+.kh-table td {
+  font-size: 0.95rem;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.kh-table td:first-child {
+  font-weight: 600;
+  color: #111827;
+}
+
+/* Badges */
+.kh-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.kh-badge-completed {
+  background-color: #d1fae5;
+  color: #065f46;
+}
+
+.kh-badge-ready {
+  background-color: #dbeafe;
+  color: #1e40af;
+}
+
+.kh-badge-preparing {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.kh-badge-cancelled {
+  background-color: #fee2e2;
+  color: #b91c1c;
+}
+
+.kh-badge-pending {
+  background-color: #f3f4f6;
+  color: #374151;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6b7280;
+  font-size: 1rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border: 1px dashed #e5e7eb;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .content-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .kh-home-page {
+    padding: 1rem;
+  }
+}

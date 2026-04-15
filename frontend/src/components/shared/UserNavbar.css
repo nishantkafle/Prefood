@@ -231,23 +231,4 @@
   box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
 }
 
-@media (max-width: 768px) {
-  .btn-label {
-    display: none;
-  }
-  
-  .user-nav-name {
-    display: none;
-  }
-  .user-profile-trigger {
-    padding: 4px;
-  }
-  
-  .user-nav-btn {
-    padding: 10px;
-  }
-  
-  .user-nav-actions {
-    gap: 10px;
-  }
-}
+

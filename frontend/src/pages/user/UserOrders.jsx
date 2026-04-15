@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import '../shared/Dashboard.css';
 import NotificationBell from '../../components/shared/NotificationBell';
 import UserNavbar from '../../components/shared/UserNavbar';
+import './UserOrders.css';
 
 const TIMER_RUNNING_STATUSES = ['accepted', 'cooking', 'preparing', 'delayed'];
 const FOOD_READY_STATUSES = ['ready', 'completed'];
@@ -112,54 +113,104 @@ function UserOrders() {
           <div className="empty-state"><p>You have no orders yet.</p></div>
         ) : (
           <div className="orders-table-container" style={{ borderRadius: '16px', boxShadow: '0 4px 24px rgba(0,0,0,0.04)', border: '1px solid #f4f4f5', overflow: 'hidden' }}>
-            <table className="orders-table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead style={{ background: '#fafafa' }}>
+            <table className="orders-table">
+              <thead>
                 <tr>
-                  <th style={{ padding: '16px', color: '#71717a', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Order ID</th>
-                  <th style={{ padding: '16px', color: '#71717a', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Restaurant</th>
-                  <th style={{ padding: '16px', color: '#71717a', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Date/Time</th>
-                  <th style={{ padding: '16px', color: '#71717a', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Items</th>
-                  <th style={{ padding: '16px', color: '#71717a', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total</th>
-                  <th style={{ padding: '16px', color: '#71717a', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>ETA</th>
-                  <th style={{ padding: '16px', color: '#71717a', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Status</th>
-                  <th style={{ padding: '16px', color: '#71717a', fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Action</th>
+                  <th>Order ID</th>
+                  <th>Restaurant</th>
+                  <th>Date</th>
+                  <th>Items</th>
+                  <th>Total</th>
+                  <th>Status</th>
+                  <th>ETA</th>
+                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {currentOrders.map((order) => (
-                  <tr key={order._id} style={{ borderBottom: '1px solid #f4f4f5', transition: 'background 0.2s', ':hover': { background: '#fafafa' } }}>
-                    <td style={{ padding: '16px', fontWeight: '600', color: '#18181b' }}>{order.orderId}</td>
-                    <td style={{ padding: '16px', color: '#3f3f46' }}>{order.restaurantName || 'Unknown'}</td>
-                    <td style={{ padding: '16px', color: '#3f3f46' }}>{new Date(order.placedAt).toLocaleString()}</td>
-                    <td style={{ padding: '16px', color: '#3f3f46' }}>{order.itemCount}</td>
-                    <td style={{ padding: '16px', color: '#18181b', fontWeight: '600' }}>NPR {Number(order.totalAmount || 0).toFixed(2)}</td>
-                    <td style={{ padding: '16px', color: '#3f3f46', fontWeight: '500' }}>
+                  <tr key={order?._id || Math.random()}>
+                    <td className="order-id-cell">#{order?.orderId || 'N/A'}</td>
+                    <td>{order?.restaurantName || 'Unknown'}</td>
+                    <td>
+                      {order?.placedAt ? (
+                        <>
+                          {new Date(order.placedAt).toLocaleDateString()} at{' '}
+                          {new Date(order.placedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </>
+                      ) : 'Unknown'}
+                    </td>
+                    <td>{order.itemCount}</td>
+                    <td>NPR {Number(order.totalAmount || 0).toFixed(2)}</td>
+                    <td>
+                      <span className={getStatusClass(order.status)}>{order.status}</span>
+                    </td>
+                    <td>
                       {order.isCancelled
-                        ? '—'
+                        ? 'Cancelled'
                         : FOOD_READY_STATUSES.includes(order.status)
-                          ? <span style={{ color: '#16a34a' }}>Food ready</span>
-                        : order.isDelayed
-                          ? <span style={{ color: '#ea580c' }}>Delayed ({order.estimatedTime} mins)</span>
-                          : !hasTimerStarted(order)
-                            ? <span style={{ color: '#71717a' }}>Waiting...</span>
-                          : <span style={{ color: '#f97316' }}>{formatTimeLeft(order.remainingSeconds)}</span>}
+                          ? 'Ready'
+                          : order.isDelayed
+                            ? 'Delayed'
+                            : !hasTimerStarted(order)
+                              ? 'Pending'
+                              : formatTimeLeft(order.remainingSeconds)}
                     </td>
-                    <td style={{ padding: '16px' }}>
-                      <span className={getStatusClass(order.status)} style={{ padding: '6px 12px', borderRadius: '20px', fontWeight: '600' }}>{order.status}</span>
-                    </td>
-                    <td style={{ padding: '16px' }}>
+                    <td>
                       <button
                         className="action-btn accept"
-                        style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 16px', background: '#ff6600', borderRadius: '8px', fontWeight: '600', transition: 'all 0.2s' }}
                         onClick={() => navigate(`/order/track/${order._id}`)}
                       >
-                        <Eye size={16} /> Details
+                        View
                       </button>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+
+            {/* Mobile Cards List */}
+            <div className="order-cards-list">
+              {currentOrders.map((order) => (
+                <div key={order._id} className="order-mobile-card">
+                  <div className="order-card-header">
+                    <div>
+                      <div className="order-card-id">#{order.orderId}</div>
+                      <div className="order-card-restaurant">{order.restaurantName || 'Unknown'}</div>
+                      <div className="order-card-date">{new Date(order.placedAt).toLocaleDateString()} at {new Date(order.placedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                    <span className={getStatusClass(order.status)}>{order.status}</span>
+                  </div>
+                  
+                  <div className="order-card-body">
+                    <div className="order-card-left">
+                      <div className="order-card-items">{order.itemCount} items</div>
+                      <div className="order-card-total">NPR {Number(order.totalAmount || 0).toFixed(2)}</div>
+                    </div>
+                    
+                    <div className="order-card-right">
+                      <div className="order-card-eta">
+                        {order.isCancelled
+                          ? 'Cancelled'
+                          : FOOD_READY_STATUSES.includes(order.status)
+                            ? 'Ready'
+                            : order.isDelayed
+                              ? 'Delayed'
+                              : !hasTimerStarted(order)
+                                ? 'Pending'
+                                : formatTimeLeft(order.remainingSeconds)}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <button
+                    className="order-card-btn"
+                    onClick={() => navigate(`/order/track/${order._id}`)}
+                  >
+                    <Eye size={16} /> View Tracking
+                  </button>
+                </div>
+              ))}
+            </div>
             
             {totalPages > 1 && (
               <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px', gap: '16px', background: '#fff', borderTop: '1px solid #f4f4f5' }}>

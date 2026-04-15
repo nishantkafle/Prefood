@@ -1,0 +1,124 @@
+/* UserOrders.css */
+
+.orders-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Mobile Card Layout */
+@media (max-width: 768px) {
+  .orders-table-container {
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+  }
+  
+  .orders-table {
+    display: none !important;
+  }
+  
+  .order-cards-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .order-mobile-card {
+    background: var(--bg-main);
+    border-radius: 16px;
+    padding: 16px;
+    border: 1px solid var(--border-light);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .order-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+  }
+  
+  .order-card-id {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-muted);
+  }
+  
+  .order-card-restaurant {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-main);
+    margin: 4px 0;
+  }
+  
+  .order-card-date {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+  
+  .order-card-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-top: 12px;
+    border-top: 1px dashed var(--border-light);
+  }
+  
+  .order-card-left {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .order-card-items {
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+  
+  .order-card-total {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--brand);
+  }
+  
+  .order-card-eta {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--brand);
+    margin-bottom: 4px;
+  }
+  
+  .order-card-btn {
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px;
+    background: var(--brand-light);
+    color: var(--brand);
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s ease;
+  }
+  
+  .order-card-btn:active {
+    transform: scale(0.98);
+    background: var(--brand);
+    color: white;
+  }
+}
+
+/* Desktop Styles Overrides (Table Polish) */
+@media (min-width: 769px) {
+  .order-cards-list {
+    display: none !important;
+  }
+  
+  .orders-table tr:hover {
+    background-color: var(--bg-sub);
+  }
+}

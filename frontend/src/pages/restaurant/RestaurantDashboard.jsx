@@ -8,7 +8,7 @@ import KitchenHome from './KitchenHome';
 import KitchenQueue from './KitchenQueue';
 import RestaurantSettings from './RestaurantSettings';
 import NotificationBell from '../../components/shared/NotificationBell';
-import InstallAppButton from '../../components/shared/InstallAppButton';
+
 import DashboardNavbar from '../../components/shared/DashboardNavbar';
 import { uploadImageToCloudinary } from '../../utils/cloudinary';
 import '../shared/Dashboard.css';
@@ -282,7 +282,6 @@ function RestaurantDashboard() {
         rightContent={(
           <>
             <NotificationBell />
-            <InstallAppButton className="install-btn install-app-btn" />
           </>
         )}
       />

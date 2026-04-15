@@ -168,9 +168,9 @@ export default function OrderTracking() {
       <div className="dashboard-content">
         <div className="content-header">
           <div>
-            <div className="breadcrumb">Home / My Orders / View Details</div>
+            <div className="breadcrumb desktop-only">Home / My Orders / View Details</div>
             <h1>Order Details</h1>
-            <p className="subtitle">Track real-time status and preparation updates</p>
+            <p className="subtitle desktop-only">Track real-time status and preparation updates</p>
           </div>
         </div>
 

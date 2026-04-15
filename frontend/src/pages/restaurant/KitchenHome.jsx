@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Clock3, Flame, Wallet } from 'lucide-react';
+import './KitchenHome.css';
 
 function KitchenHome() {
   const [orders, setOrders] = useState([]);

@@ -1,16 +1,17 @@
 import React from 'react';
-import InstallAppButton from './InstallAppButton';
+
 
 function PublicNavbar({ onLogin, onRegister }) {
   return (
     <header className="ph-header">
-      <div className="ph-brand">
-        <span className="ph-brand-name">HotStop</span>
-      </div>
-      <div className="ph-header-actions">
-        <InstallAppButton className="ph-install-btn" iconSize={15} />
-        <button type="button" className="ph-login-btn" onClick={onLogin}>Login</button>
-        <button type="button" className="ph-register-btn" onClick={onRegister}>Register</button>
+      <div className="ph-section-container" style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', padding: '0 1rem' }}>
+        <div className="ph-brand">
+          <span className="ph-brand-name">HotStop</span>
+        </div>
+        <div className="ph-header-actions">
+          <button type="button" className="ph-login-btn" onClick={onLogin}>Log In</button>
+          <button type="button" className="ph-register-btn" onClick={onRegister}>Join Now</button>
+        </div>
       </div>
     </header>
   );
