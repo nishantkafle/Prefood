@@ -253,7 +253,14 @@ export const createUserPreorder = async (req, res) => {
         });
 
         const io = getIO();
-        if (io) io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
+        if (io) {
+            // Notify user tracking the specific order
+            io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
+            // Notify restaurant dashboard of new order
+            io.to(`restaurant_orders_${restaurantId}`).emit('order:new', order);
+            // Notify user list of new order
+            if (req.user?._id) io.to(`user_${req.user._id.toString()}`).emit('order:new', order);
+        }
         return res.json({ success: true, message: 'Preorder created successfully', data: order });
     } catch (error) {
         return res.json({ success: false, message: error.message });
@@ -329,7 +336,10 @@ export const createOrder = async (req, res) => {
 
         await order.save();
         const io = getIO();
-        if (io) io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
+        if (io) {
+            io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
+            io.to(`restaurant_orders_${restaurantId}`).emit('order:new', order);
+        }
         return res.json({ success: true, message: 'Order created successfully', data: order });
     } catch (error) {
         return res.json({ success: false, message: error.message });
@@ -465,8 +475,8 @@ export const updateOrderStatus = async (req, res) => {
         const dineInTimestamp = order?.dineInAt ? new Date(order.dineInAt).getTime() : null;
         const hasFutureDineIn = Number.isFinite(dineInTimestamp) && dineInTimestamp > Date.now();
 
-        if (normalizedStatus === 'accepted' && hasFutureDineIn) {
-            nextStatus = 'scheduled';
+        if (normalizedStatus === 'accepted') {
+            nextStatus = hasFutureDineIn ? 'scheduled' : 'cooking';
         }
 
         if (!order.acceptedAt && ['accepted', 'cooking', 'preparing', 'delayed', 'ready', 'completed'].includes(nextStatus)) {
@@ -490,7 +500,11 @@ export const updateOrderStatus = async (req, res) => {
         }
 
         const io = getIO();
-        if (io) io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
+        if (io) {
+            io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
+            io.to(`restaurant_orders_${order.restaurantId.toString()}`).emit('order:updated', order);
+            if (order.customerId) io.to(`user_${order.customerId.toString()}`).emit('order:updated', order);
+        }
         return res.json({ success: true, message: 'Order status updated', data: order });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
@@ -517,7 +531,11 @@ export const updateEstimatedTime = async (req, res) => {
         order.estimatedTime = parsedEstimatedTime;
         await order.save();
         const io = getIO();
-        if (io) io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
+        if (io) {
+            io.to(`order_${order._id.toString()}`).emit('orderUpdated', { orderId: order._id, data: order });
+            io.to(`restaurant_orders_${order.restaurantId.toString()}`).emit('order:updated', order);
+            if (order.customerId) io.to(`user_${order.customerId.toString()}`).emit('order:updated', order);
+        }
         return res.json({ success: true, message: 'Estimated time updated', data: order });
     } catch (error) {
         return res.status(500).json({ success: false, message: error.message });
