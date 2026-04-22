@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { BarChart3, ChefHat, MenuSquare, Layers, ClipboardList, MessagesSquare, Settings, LogOut } from 'lucide-react';
+import { BarChart3, ChefHat, MenuSquare, Layers, ClipboardList, MessagesSquare, Settings, LogOut, Pencil, Trash2, Clock, Info, X, Coffee } from 'lucide-react';
 import { createAppSocket } from '../../config/socket';
 import OrderManagement from './OrderManagement';
 import KitchenHome from './KitchenHome';
@@ -10,8 +10,12 @@ import RestaurantSettings from './RestaurantSettings';
 import NotificationBell from '../../components/shared/NotificationBell';
 
 import DashboardNavbar from '../../components/shared/DashboardNavbar';
+import Pagination from '../../components/admin/Pagination';
+import ConfirmModal from '../../components/shared/ConfirmModal';
 import { uploadImageToCloudinary } from '../../utils/cloudinary';
 import '../shared/Dashboard.css';
+
+const ITEMS_PER_PAGE = 5;
 
 function RestaurantDashboard() {
   const navigate = useNavigate();
@@ -34,6 +38,9 @@ function RestaurantDashboard() {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const profileMenuRef = useRef(null);
   const socketRef = useRef(null);
+
+  // Delete State
+  const [itemToDelete, setItemToDelete] = useState(null);
 
   useEffect(() => {
     fetchMenuItems();
@@ -151,26 +158,22 @@ function RestaurantDashboard() {
 
     try {
       if (editingItem) {
-        // Update existing item
         const response = await axios.put(
           `/api/menu/${editingItem._id}`,
           formData,
           { withCredentials: true }
         );
         if (response.data.success) {
-          alert('Menu item updated successfully!');
           resetForm();
           fetchMenuItems();
         }
       } else {
-        // Add new item
         const response = await axios.post(
           '/api/menu/add',
           formData,
           { withCredentials: true }
         );
         if (response.data.success) {
-          alert('Menu item added successfully!');
           resetForm();
           fetchMenuItems();
         }
@@ -210,20 +213,20 @@ function RestaurantDashboard() {
     setShowForm(true);
   };
 
-  const handleDelete = async (id) => {
-    if (window.confirm('Are you sure you want to delete this menu item?')) {
-      try {
-        const response = await axios.delete(
-          `/api/menu/${id}`,
-          { withCredentials: true }
-        );
-        if (response.data.success) {
-          alert('Menu item deleted successfully!');
-          fetchMenuItems();
-        }
-      } catch (err) {
-        alert(err.response?.data?.message || 'Something went wrong');
+  const handleDeleteConfirmed = async () => {
+    if (!itemToDelete) return;
+    try {
+      const response = await axios.delete(
+        `/api/menu/${itemToDelete._id}`,
+        { withCredentials: true }
+      );
+      if (response.data.success) {
+        fetchMenuItems();
       }
+    } catch (err) {
+      alert(err.response?.data?.message || 'Something went wrong');
+    } finally {
+      setItemToDelete(null);
     }
   };
 
@@ -265,13 +268,9 @@ function RestaurantDashboard() {
     const nonVegItems = menuItems.filter((item) => item.category === 'non-veg').length;
     const veganItems = menuItems.filter((item) => item.category === 'vegan').length;
 
-    return {
-      totalItems,
-      vegItems,
-      nonVegItems,
-      veganItems
-    };
+    return { totalItems, vegItems, nonVegItems, veganItems };
   }, [menuItems]);
+
 
   return (
     <div className="dashboard-container">
@@ -372,7 +371,6 @@ function RestaurantDashboard() {
                 </button>
               </div>
 
-              {/* KPI Section */}
               <div className="rk-kpi-grid">
                 <div className="rk-kpi-card">
                   <div className="rk-kpi-icon total"><Layers size={20} /></div>
@@ -405,11 +403,14 @@ function RestaurantDashboard() {
               </div>
 
               {showForm && (
-                <div className="rk-modal-overlay">
-                  <div className="rk-form-modal">
+                <div className="rk-modal-overlay" onClick={resetForm}>
+                  <div className="rk-form-modal premium-rk-modal" onClick={e => e.stopPropagation()}>
                     <div className="rk-modal-header">
-                      <h2>{editingItem ? 'Edit Dish Details' : 'Create New Dish'}</h2>
-                      <p>Fill in the details below to update your restaurant menu.</p>
+                      <div className="header-text">
+                        <h2>{editingItem ? 'Edit Dish Profile' : 'New Dish Architecture'}</h2>
+                        <p>Configure your menu items with precise details and high-quality imagery.</p>
+                      </div>
+                      <button className="rk-modal-close" onClick={resetForm}><X size={20} /></button>
                     </div>
                     
                     <form onSubmit={handleSubmit} className="rk-form">
@@ -422,7 +423,7 @@ function RestaurantDashboard() {
                             value={formData.name}
                             onChange={handleChange}
                             required
-                            placeholder="e.g., Spicy Paneer Tikka"
+                            placeholder="e.g., Signature Pasta"
                           />
                         </div>
                         <div className="rk-form-group">
@@ -442,12 +443,12 @@ function RestaurantDashboard() {
                             onChange={handleChange}
                             required
                             rows="3"
-                            placeholder="Write a brief, appetizing description..."
+                            placeholder="Describe the ingredients and preparation..."
                           />
                         </div>
 
                         <div className="rk-form-group">
-                          <label>Prep Time (mins)</label>
+                          <label>Preparation Time (mins)</label>
                           <input
                             type="number"
                             name="prepTime"
@@ -471,8 +472,8 @@ function RestaurantDashboard() {
                         </div>
 
                         <div className="rk-form-group rk-span-2">
-                          <label>Food Image</label>
-                          <div className="rk-image-upload-box">
+                          <label>Visual Identity (Image)</label>
+                          <div className="rk-premium-upload-box">
                             <input
                               type="file"
                               accept="image/*"
@@ -482,11 +483,14 @@ function RestaurantDashboard() {
                             />
                             <label htmlFor="dish-image-input" className="rk-image-label">
                               {imagePreview ? (
-                                <img src={imagePreview} alt="Preview" className="rk-image-preview" />
+                                <div className="preview-container">
+                                  <img src={imagePreview} alt="Preview" className="rk-image-preview" />
+                                  <div className="change-overlay">Replace Visual</div>
+                                </div>
                               ) : (
                                 <div className="rk-upload-placeholder">
-                                  <div className="rk-upload-icon">+</div>
-                                  <span>Click to upload photo</span>
+                                  <div className="pulse-icon">+</div>
+                                  <span>Establish Dish Imagery</span>
                                 </div>
                               )}
                             </label>
@@ -495,9 +499,9 @@ function RestaurantDashboard() {
                       </div>
 
                       <div className="rk-form-actions">
-                        <button type="button" className="rk-btn-secondary" onClick={resetForm}>Cancel</button>
-                        <button type="submit" className="rk-btn-primary" disabled={loading}>
-                          {loading ? 'Processing...' : editingItem ? 'Save Changes' : 'Create Item'}
+                        <button type="button" className="rk-btn-secondary" onClick={resetForm}>Discard</button>
+                        <button type="submit" className="rk-btn-primary premium-submit" disabled={loading}>
+                          {loading ? <div className="spinner-small"></div> : editingItem ? 'Update Dish' : 'Publish Dish'}
                         </button>
                       </div>
                     </form>
@@ -507,8 +511,11 @@ function RestaurantDashboard() {
 
               <div className="rk-items-section">
                 <div className="rk-section-title">
-                  <h3>Active Menu</h3>
-                  <span>{menuItems.length} Dishes Total</span>
+                  <div className="rk-title-with-icon">
+                    <Layers size={20} />
+                    <h3>Active Menu</h3>
+                  </div>
+                  <span className="rk-title-badge">{menuItems.length} Dishes Total</span>
                 </div>
 
                 {loading && !menuItems.length ? (
@@ -522,50 +529,59 @@ function RestaurantDashboard() {
                     <p>Your menu is empty. Start adding delicious items!</p>
                   </div>
                 ) : (
-                  <div className="rk-items-grid">
-                    {menuItems.map((item) => (
-                      <div key={item._id} className={`rk-item-card ${item.isActive ? 'active' : 'inactive'}`}>
-                        <div className="rk-item-media">
-                          {item.image ? (
-                            <img src={item.image} alt={item.name} />
-                          ) : (
-                            <div className="rk-media-placeholder">No Image</div>
-                          )}
-                          <div className={`rk-status-tag ${item.isActive ? 'active' : 'inactive'}`}>
-                            {item.isActive ? 'Live' : 'Hidden'}
-                          </div>
-                        </div>
-
-                        <div className="rk-item-content">
-                          <div className="rk-item-header">
-                            <div>
-                              <h4>{item.name}</h4>
-                              <span className={`rk-cat-label ${item.category}`}>{item.category}</span>
+                  <>
+                    <div className="rk-items-grid">
+                      {menuItems.map((item) => (
+                        <div key={item._id} className={`rk-item-card ${item.isActive ? 'active' : 'inactive'}`}>
+                          <div className="rk-item-media">
+                            {item.image ? (
+                              <img src={item.image} alt={item.name} />
+                            ) : (
+                              <div className="rk-media-placeholder">No Image</div>
+                            )}
+                            <div className={`rk-status-tag ${item.isActive ? 'active' : 'inactive'}`}>
+                              {item.isActive ? 'Live' : 'Hidden'}
                             </div>
-                            <span className="rk-item-price">NPR {item.price}</span>
-                          </div>
-                          
-                          <p className="rk-item-desc">{item.description}</p>
-                          
-                          <div className="rk-item-meta">
-                            <span>⏱ {item.prepTime} mins</span>
                           </div>
 
-                          <div className="rk-item-actions">
-                            <button 
-                              className={`rk-action-toggle ${item.isActive ? 'on' : 'off'}`}
-                              onClick={() => handleToggleItemStatus(item)}
-                              title={item.isActive ? 'Disable' : 'Enable'}
-                            >
-                              {item.isActive ? 'Disable' : 'Enable'}
-                            </button>
-                            <button className="rk-action-edit" onClick={() => handleEdit(item)}>Edit</button>
-                            <button className="rk-action-delete" onClick={() => handleDelete(item._id)}>Delete</button>
+                          <div className="rk-item-content">
+                            <div className="rk-item-header">
+                              <div>
+                                <h4>{item.name}</h4>
+                                <span className={`rk-cat-label ${item.category}`}>{item.category}</span>
+                              </div>
+                              <span className="rk-item-price">NPR {item.price}</span>
+                            </div>
+                            
+                            <p className="rk-item-desc">{item.description}</p>
+                            
+                            <div className="rk-item-meta">
+                              <span className="rk-meta-item"><Clock size={14} /> {item.prepTime} mins</span>
+                              <span className="rk-meta-item"><Info size={14} /> {item.isActive ? 'Visible to customers' : 'Hidden from menu'}</span>
+                            </div>
+
+                            <div className="rk-item-actions">
+                              <button 
+                                className={`rk-action-toggle ${item.isActive ? 'on' : 'off'}`}
+                                onClick={() => handleToggleItemStatus(item)}
+                                title={item.isActive ? 'Disable' : 'Enable'}
+                              >
+                                {item.isActive ? 'Deactivate' : 'Activate'}
+                              </button>
+                              <div className="rk-action-group">
+                                <button className="rk-mini-action edit" onClick={() => handleEdit(item)} title="Edit Item">
+                                  <Pencil size={18} />
+                                </button>
+                                <button className="rk-mini-action delete" onClick={() => setItemToDelete(item)} title="Delete Item">
+                                  <Trash2 size={18} />
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  </>
                 )}
               </div>
             </div>
@@ -577,6 +593,14 @@ function RestaurantDashboard() {
         </div>
       </div>
 
+      <ConfirmModal
+        isOpen={!!itemToDelete}
+        title="Remove Menu Item"
+        message={`Are you sure you want to remove "${itemToDelete?.name}"? Customers will no longer be able to order this dish.`}
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setItemToDelete(null)}
+        confirmText="Yes, Delete Dish"
+      />
     </div>
   );
 }

@@ -1,0 +1,164 @@
+.ps-page {
+  min-height: calc(100vh - 84px);
+  display: grid;
+  place-items: center;
+  padding: 28px 16px 44px;
+  background:
+    radial-gradient(900px 340px at 80% -10%, #fde68a 0%, transparent 55%),
+    radial-gradient(700px 260px at 0% 100%, #fed7aa 0%, transparent 52%),
+    linear-gradient(180deg, #fff8f1 0%, #fffaf5 45%, #ffffff 100%);
+}
+
+.ps-card {
+  width: min(680px, 100%);
+  position: relative;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #ffedd5;
+  border-radius: 24px;
+  box-shadow: 0 20px 55px rgba(194, 65, 12, 0.12);
+  padding: 32px 28px;
+  text-align: center;
+}
+
+.ps-accent {
+  position: absolute;
+  inset: 0 auto auto 0;
+  width: 100%;
+  height: 8px;
+  background: linear-gradient(90deg, #f97316 0%, #fb923c 55%, #fdba74 100%);
+}
+
+.ps-card.failure .ps-accent {
+  background: linear-gradient(90deg, #ef4444 0%, #f87171 55%, #fca5a5 100%);
+}
+
+.ps-icon-wrap {
+  width: 84px;
+  height: 84px;
+  margin: 8px auto 18px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: #16a34a;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.ps-card.failure .ps-icon-wrap {
+  color: #dc2626;
+  background: #fef2f2;
+  border-color: #fecaca;
+}
+
+.ps-title {
+  font-size: clamp(1.6rem, 2vw, 2rem);
+  line-height: 1.18;
+  letter-spacing: -0.02em;
+  color: #111827;
+  margin: 0 0 10px;
+}
+
+.ps-message {
+  margin: 0 auto;
+  max-width: 50ch;
+  font-size: 1rem;
+  color: #4b5563;
+}
+
+.ps-order-box {
+  margin: 22px auto 10px;
+  width: min(520px, 100%);
+  border: 1px dashed #fdba74;
+  border-radius: 16px;
+  padding: 14px 16px;
+  background: #fff7ed;
+  text-align: left;
+}
+
+.ps-order-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9a3412;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 6px;
+}
+
+.ps-order-value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #7c2d12;
+  word-break: break-all;
+}
+
+.ps-reason {
+  margin-top: 8px;
+  color: #b91c1c;
+  font-size: 0.92rem;
+}
+
+.ps-actions {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+}
+
+.ps-btn {
+  min-height: 46px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  padding: 0 16px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.ps-btn:hover {
+  transform: translateY(-1px);
+}
+
+.ps-btn-primary {
+  color: #ffffff;
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 65%, #fb923c 100%);
+  box-shadow: 0 10px 24px rgba(234, 88, 12, 0.25);
+}
+
+.ps-btn-primary:hover {
+  box-shadow: 0 14px 28px rgba(234, 88, 12, 0.32);
+}
+
+.ps-btn-secondary {
+  color: #7c2d12;
+  background: #fff7ed;
+  border-color: #fed7aa;
+}
+
+.ps-btn-secondary:hover {
+  background: #ffedd5;
+}
+
+@media (max-width: 640px) {
+  .ps-card {
+    padding: 28px 16px 18px;
+    border-radius: 18px;
+  }
+
+  .ps-actions {
+    flex-direction: column;
+  }
+
+  .ps-btn {
+    width: 100%;
+  }
+}

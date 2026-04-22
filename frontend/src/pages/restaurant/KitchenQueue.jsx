@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
+import { createAppSocket } from '../../config/socket';
 
 function KitchenQueue() {
   const [orders, setOrders] = useState([]);
@@ -9,8 +10,9 @@ function KitchenQueue() {
   const [elapsedTimes, setElapsedTimes] = useState({});
   const [editingTimeId, setEditingTimeId] = useState(null);
   const [editingTimeVal, setEditingTimeVal] = useState('');
+  const [profile, setProfile] = useState(null);
   const timerRef = useRef(null);
-  const pollRef = useRef(null);
+  const socketRef = useRef(null);
 
   const fetchOrders = useCallback(async () => {
     try {
@@ -24,15 +26,45 @@ function KitchenQueue() {
   }, []);
 
   useEffect(() => {
-    fetchOrders();
-    pollRef.current = setInterval(() => {
-      fetchOrders();
-    }, 10000);
-    return () => {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.get('/api/auth/profile', { withCredentials: true });
+        if (response.data.success) {
+          setProfile(response.data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+      }
     };
+    fetchProfile();
+    fetchOrders();
   }, [fetchOrders]);
+
+  useEffect(() => {
+    if (!profile?._id) return;
+
+    socketRef.current = createAppSocket();
+
+    socketRef.current.on('connect', () => {
+      socketRef.current.emit('joinRestaurantOrders', profile._id);
+    });
+
+    const handleOrderEvent = () => {
+      fetchOrders();
+    };
+
+    socketRef.current.on('order:new', handleOrderEvent);
+    socketRef.current.on('order:updated', handleOrderEvent);
+    socketRef.current.on('orderUpdated', handleOrderEvent);
+    socketRef.current.on('order:deleted', handleOrderEvent);
+
+    return () => {
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('leaveRestaurantOrders', profile._id);
+      }
+      socketRef.current?.disconnect();
+    };
+  }, [profile?._id, fetchOrders]);
 
   useEffect(() => {
     timerRef.current = setInterval(() => {
@@ -211,16 +243,11 @@ function KitchenQueue() {
 
   const handlePause = () => {
     setPaused(true);
-    clearInterval(pollRef.current);
-    pollRef.current = null;
+    // Add logic if there's a backend flag to disable orders
   };
 
   const handleResume = () => {
     setPaused(false);
-    clearInterval(pollRef.current);
-    pollRef.current = setInterval(() => {
-      fetchOrders();
-    }, 10000);
     fetchOrders();
   };
 
@@ -311,9 +338,6 @@ function KitchenQueue() {
               Complete
             </button>
           )}
-          <button className="kq-btn kq-btn-reorder" onClick={() => updateOrderStatus(order._id, 'pending')}>
-            Reorder
-          </button>
         </div>
       </div>
     );

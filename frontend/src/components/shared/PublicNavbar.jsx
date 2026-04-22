@@ -6,7 +6,7 @@ function PublicNavbar({ onLogin, onRegister }) {
     <header className="ph-header">
       <div className="ph-section-container" style={{ display: 'flex', width: '100%', alignItems: 'center', justifyContent: 'space-between', padding: '0 1rem' }}>
         <div className="ph-brand">
-          <span className="ph-brand-name">HotStop</span>
+          <img src="/logo.png" alt="HotStop Logo" style={{ maxWidth: '250px', maxHeight: '70px', objectFit: 'contain' }} />
         </div>
         <div className="ph-header-actions">
           <button type="button" className="ph-login-btn" onClick={onLogin}>Log In</button>

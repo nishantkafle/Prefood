@@ -1,10 +1,13 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { CheckCircle2, Clock3, Flame, Wallet } from 'lucide-react';
+import { createAppSocket } from '../../config/socket';
 import './KitchenHome.css';
 
 function KitchenHome() {
   const [orders, setOrders] = useState([]);
+  const [profile, setProfile] = useState(null);
+  const socketRef = useRef(null);
   const [selectedDate, setSelectedDate] = useState(() => {
     const now = new Date();
     const y = now.getFullYear();
@@ -25,12 +28,46 @@ function KitchenHome() {
   }, []);
 
   useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.get('/api/auth/profile', { withCredentials: true });
+        if (response.data.success) {
+          setProfile(response.data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+      }
+    };
+
+    fetchProfile();
     fetchOrders();
-    const pollId = setInterval(() => {
-      fetchOrders();
-    }, 15000);
-    return () => clearInterval(pollId);
   }, [fetchOrders]);
+
+  useEffect(() => {
+    if (!profile?._id) return;
+
+    socketRef.current = createAppSocket();
+
+    socketRef.current.on('connect', () => {
+      socketRef.current.emit('joinRestaurantOrders', profile._id);
+    });
+
+    const handleOrderEvent = () => {
+      fetchOrders();
+    };
+
+    socketRef.current.on('order:new', handleOrderEvent);
+    socketRef.current.on('order:updated', handleOrderEvent);
+    socketRef.current.on('orderUpdated', handleOrderEvent);
+    socketRef.current.on('order:deleted', handleOrderEvent);
+
+    return () => {
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('leaveRestaurantOrders', profile._id);
+      }
+      socketRef.current?.disconnect();
+    };
+  }, [profile?._id, fetchOrders]);
 
   const getDateKey = (dateValue) => {
     const date = new Date(dateValue);
@@ -55,12 +92,18 @@ function KitchenHome() {
   const todayCompleted = todayOrders.filter(order => order.status === 'completed').length;
   const todayPending = todayOrders.filter(order => order.status === 'pending').length;
   const todayInKitchen = todayOrders.filter(order => ['pending', 'preparing'].includes(order.status)).length;
-  const todayEarnings = todayOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+  const todayEarnings = todayOrders.reduce((sum, order) => {
+    if (order.status === 'cancelled') return sum;
+    return sum + (order.totalAmount || 0);
+  }, 0);
 
   const selectedCompleted = selectedOrders.filter(order => order.status === 'completed').length;
   const selectedPending = selectedOrders.filter(order => order.status === 'pending').length;
   const selectedInKitchen = selectedOrders.filter(order => ['pending', 'preparing'].includes(order.status)).length;
-  const selectedEarnings = selectedOrders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+  const selectedEarnings = selectedOrders.reduce((sum, order) => {
+    if (order.status === 'cancelled') return sum;
+    return sum + (order.totalAmount || 0);
+  }, 0);
 
   const recentOrders = [...selectedOrders]
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))

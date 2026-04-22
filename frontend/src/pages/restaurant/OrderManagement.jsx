@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { createAppSocket } from '../../config/socket';
 
 const getCurrentLocalDateTimeValue = () => {
   const now = new Date();
@@ -19,9 +20,12 @@ function OrderManagement() {
   const [orders, setOrders] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const socketRef = useRef(null);
   const [activeTab, setActiveTab] = useState('ongoing');
   const [searchQuery, setSearchQuery] = useState('');
   const [showOrderForm, setShowOrderForm] = useState(false);
+  const [menuSearch, setMenuSearch] = useState('');
   const [editingTimeId, setEditingTimeId] = useState(null);
   const [editingTimeValue, setEditingTimeValue] = useState('');
   const [savingTimeId, setSavingTimeId] = useState(null);
@@ -33,9 +37,21 @@ function OrderManagement() {
   });
 
   useEffect(() => {
+    fetchProfile();
     fetchOrders();
     fetchMenuItems();
   }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await axios.get('/api/auth/profile', { withCredentials: true });
+      if (response.data.success) {
+        setProfile(response.data.data);
+      }
+    } catch (err) {
+      console.error('Error fetching profile:', err);
+    }
+  };
 
   const fetchOrders = async () => {
     try {
@@ -64,6 +80,32 @@ function OrderManagement() {
       console.error('Error fetching menu items:', err);
     }
   };
+
+  useEffect(() => {
+    if (!profile?._id) return;
+
+    socketRef.current = createAppSocket();
+
+    socketRef.current.on('connect', () => {
+      socketRef.current.emit('joinRestaurantOrders', profile._id);
+    });
+
+    const handleOrderEvent = () => {
+      fetchOrders();
+    };
+
+    socketRef.current.on('order:new', handleOrderEvent);
+    socketRef.current.on('order:updated', handleOrderEvent);
+    socketRef.current.on('orderUpdated', handleOrderEvent);
+    socketRef.current.on('order:deleted', handleOrderEvent);
+
+    return () => {
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('leaveRestaurantOrders', profile._id);
+      }
+      socketRef.current?.disconnect();
+    };
+  }, [profile?._id]);
 
   const handleAddItem = (menuItem) => {
     setOrderForm(prev => {
@@ -116,6 +158,12 @@ function OrderManagement() {
     return orderForm.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   };
 
+  const resetOfflineOrderForm = () => {
+    setOrderForm({ customerName: '', customerPhone: '', dineInAt: getCurrentLocalDateTimeValue(), items: [] });
+    setMenuSearch('');
+    setShowOrderForm(false);
+  };
+
   const handleCreateOrder = async (e) => {
     e.preventDefault();
     if (!orderForm.customerName || orderForm.items.length === 0) {
@@ -149,8 +197,7 @@ function OrderManagement() {
       }, { withCredentials: true });
       if (response.data.success) {
         alert('Order created successfully!');
-        setShowOrderForm(false);
-        setOrderForm({ customerName: '', customerPhone: '', dineInAt: getCurrentLocalDateTimeValue(), items: [] });
+        resetOfflineOrderForm();
         fetchOrders();
       } else {
         alert(response.data.message || 'Failed to create order');
@@ -361,6 +408,15 @@ function OrderManagement() {
   };
 
   const filteredOrders = getFilteredOrders();
+  const filteredMenuItems = menuItems.filter((item) => {
+    if (!menuSearch.trim()) return true;
+    const q = menuSearch.toLowerCase();
+    return (
+      item.name?.toLowerCase().includes(q)
+      || item.category?.toLowerCase().includes(q)
+      || String(item.price || '').includes(q)
+    );
+  });
 
   return (
     <>
@@ -374,6 +430,7 @@ function OrderManagement() {
           className="add-btn"
           onClick={() => {
             setOrderForm({ customerName: '', customerPhone: '', dineInAt: getCurrentLocalDateTimeValue(), items: [] });
+            setMenuSearch('');
             setShowOrderForm(true);
           }}
         >
@@ -403,15 +460,20 @@ function OrderManagement() {
       </div>
 
       {showOrderForm && (
-        <div className="form-modal">
-          <div className="form-container order-form-container">
-            <div className="order-form-header">
-              <h2>Create New Order</h2>
-              <p>Build an offline order quickly from your current menu items.</p>
+        <div className="om-offline-modal" onClick={resetOfflineOrderForm}>
+          <div className="om-offline-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="order-form-header om-offline-header">
+              <div>
+                <h2>Create Offline Order</h2>
+                <p>Quickly build a walk-in order from your current menu.</p>
+              </div>
+              <button type="button" className="om-offline-close" onClick={resetOfflineOrderForm} aria-label="Close offline order popup">
+                x
+              </button>
             </div>
-            <form onSubmit={handleCreateOrder}>
-              <div className="form-row order-customer-row">
-                <div className="form-group">
+            <form onSubmit={handleCreateOrder} className="om-offline-form">
+              <div className="order-customer-row om-customer-grid">
+                <div className="form-group om-form-group">
                   <label>Customer Name *</label>
                   <input
                     type="text"
@@ -421,7 +483,7 @@ function OrderManagement() {
                     placeholder="e.g., Ram Prasad Kafle"
                   />
                 </div>
-                <div className="form-group">
+                <div className="form-group om-form-group">
                   <label>Phone Number</label>
                   <input
                     type="text"
@@ -430,7 +492,7 @@ function OrderManagement() {
                     placeholder="e.g. 9848000000"
                   />
                 </div>
-                <div className="form-group">
+                <div className="form-group om-form-group">
                   <label>Schedule Time *</label>
                   <input
                     type="datetime-local"
@@ -444,9 +506,18 @@ function OrderManagement() {
               </div>
 
               <div className="order-menu-select order-section-card">
-                <label>Select Items from Menu</label>
+                <div className="om-menu-head">
+                  <label>Select Items from Menu</label>
+                  <input
+                    type="text"
+                    value={menuSearch}
+                    onChange={(e) => setMenuSearch(e.target.value)}
+                    placeholder="Search item, category or price"
+                    className="om-menu-search-input"
+                  />
+                </div>
                 <div className="menu-select-grid">
-                  {menuItems.map(item => (
+                  {filteredMenuItems.map(item => (
                     <div key={item._id} className="menu-select-item" onClick={() => handleAddItem(item)}>
                       <span className="menu-select-name">{item.name}</span>
                       <div className="menu-select-meta">
@@ -456,6 +527,9 @@ function OrderManagement() {
                       <span className="menu-select-time">{item.prepTime} min</span>
                     </div>
                   ))}
+                  {filteredMenuItems.length === 0 && (
+                    <div className="om-no-menu-items">No menu items match your search.</div>
+                  )}
                 </div>
               </div>
 
@@ -509,7 +583,7 @@ function OrderManagement() {
               )}
 
               <div className="form-actions">
-                <button type="button" className="cancel-btn" onClick={() => { setShowOrderForm(false); setOrderForm({ customerName: '', customerPhone: '', dineInAt: getCurrentLocalDateTimeValue(), items: [] }); }}>
+                <button type="button" className="cancel-btn" onClick={resetOfflineOrderForm}>
                   Cancel
                 </button>
                 <button type="submit" className="submit-btn order-create-btn" disabled={loading || orderForm.items.length === 0}>

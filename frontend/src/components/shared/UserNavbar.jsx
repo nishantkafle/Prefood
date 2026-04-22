@@ -137,7 +137,6 @@ function UserNavbar({ showBrand = true }) {
   return (
     <div className="user-navbar-wrapper">
       <DashboardNavbar 
-        brand={showBrand ? "HotStop" : ""} 
         rightContent={rightContent} 
       />
     </div>

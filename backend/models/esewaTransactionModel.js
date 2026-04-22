@@ -2,10 +2,11 @@ import mongoose from 'mongoose';
 
 const esewaTransactionSchema = new mongoose.Schema({
   transactionUuid: { type: String, required: true, unique: true, index: true },
-  orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'order', required: true, index: true },
+  orderId: { type: mongoose.Schema.Types.ObjectId, ref: 'order', default: null, index: true },
   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true, index: true },
   amount: { type: Number, required: true },
   productCode: { type: String, required: true },
+  orderDraft: { type: mongoose.Schema.Types.Mixed, required: true },
   status: {
     type: String,
     enum: ['pending', 'completed', 'failed'],

@@ -333,3 +333,38 @@
 	}
 }
 
+@media (max-width: 640px) {
+	.order-tracking-root {
+		gap: 14px;
+	}
+
+	.ot-panel h3 {
+		font-size: 18px;
+		margin-bottom: 14px;
+	}
+
+	.ot-card,
+	.ot-panel {
+		padding: 16px;
+		border-radius: 12px;
+	}
+
+	.ot-value {
+		font-size: 16px;
+	}
+
+	.ot-items-table {
+		min-width: 520px;
+	}
+
+	.ot-eta-waiting,
+	.cancelled {
+		font-size: 15px;
+		padding: 12px;
+	}
+
+	.meta {
+		font-size: 14px;
+	}
+}
+

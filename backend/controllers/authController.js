@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import userModel from '../models/userModel.js';
 import menuModel from '../models/menuModel.js';
 import siteSettingModel from '../models/siteSettingModel.js';
+import { getIO } from '../utils/socket.js';
+import { createNotification } from '../utils/notifications.js';
 
 const FEATURED_RESTAURANT_LIMIT = 7;
 
@@ -103,7 +105,7 @@ export const login = async (req, res) => {
         }
 
         if (user.isActive === false) {
-            return res.json({ success: false, message: 'Your account is disabled contact to costumer care' })
+            return res.json({ success: false, message: 'Your account is suspended. Contact customer care for more information.' })
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
@@ -131,7 +133,8 @@ export const login = async (req, res) => {
                 logo: user.logo,
                 location: user.location,
                 latitude: user.latitude,
-                longitude: user.longitude
+                longitude: user.longitude,
+                isActive: user.isActive
             }, token
         });
 
@@ -159,7 +162,8 @@ export const getProfile = async (req, res) => {
                 restaurantType: user.restaurantType,
                 serviceType: user.serviceType,
                 openingTime: user.openingTime,
-                closingTime: user.closingTime
+                closingTime: user.closingTime,
+                isActive: user.isActive
             }
         });
     } catch (error) {
@@ -221,6 +225,32 @@ export const updateRestaurantSettings = async (req, res) => {
         if (longitude !== undefined) user.longitude = longitude;
 
         await user.save();
+
+        const io = getIO();
+        if (io) {
+            io.to('admin_room').emit('restaurant:updated', {
+                restaurant: {
+                    _id: String(user._id),
+                    name: user.name,
+                    email: user.email,
+                    restaurantName: user.restaurantName,
+                    logo: user.logo,
+                    location: user.location,
+                    phone: user.phone,
+                    cuisineType: user.cuisineType,
+                    restaurantType: user.restaurantType,
+                    serviceType: user.serviceType,
+                    openingTime: user.openingTime,
+                    closingTime: user.closingTime,
+                    isActive: user.isActive,
+                    isFeaturedHome: user.isFeaturedHome,
+                    latitude: user.latitude,
+                    longitude: user.longitude,
+                    updatedAt: user.updatedAt
+                }
+            });
+        }
+
         return res.json({
             success: true, message: 'Settings updated successfully', data: {
                 restaurantName: user.restaurantName,
@@ -482,6 +512,53 @@ export const adminToggleRestaurantStatus = async (req, res) => {
         restaurant.isActive = isActive;
         await restaurant.save();
 
+        await createNotification({
+            recipientId: restaurant._id,
+            type: 'account-status',
+            title: isActive ? 'Account reactivated' : 'Account suspended',
+            message: isActive
+                ? 'Your restaurant account has been reactivated.'
+                : 'Your account is suspended. Contact customer care for more information.',
+            meta: {
+                route: '/restaurant/dashboard',
+                userId: String(restaurant._id),
+                isActive
+            }
+        });
+
+        const io = getIO();
+        if (io) {
+            io.to('admin_room').emit('restaurant:statusChanged', {
+                restaurant: {
+                    _id: String(restaurant._id),
+                    name: restaurant.name,
+                    email: restaurant.email,
+                    restaurantName: restaurant.restaurantName,
+                    logo: restaurant.logo,
+                    location: restaurant.location,
+                    phone: restaurant.phone,
+                    cuisineType: restaurant.cuisineType,
+                    restaurantType: restaurant.restaurantType,
+                    serviceType: restaurant.serviceType,
+                    openingTime: restaurant.openingTime,
+                    closingTime: restaurant.closingTime,
+                    isActive: restaurant.isActive,
+                    isFeaturedHome: restaurant.isFeaturedHome,
+                    latitude: restaurant.latitude,
+                    longitude: restaurant.longitude,
+                    updatedAt: restaurant.updatedAt
+                }
+            });
+
+            io.to(`user_${restaurant._id.toString()}`).emit('restaurant:statusChanged', {
+                userId: String(restaurant._id),
+                isActive,
+                message: isActive
+                    ? 'Your account has been reactivated.'
+                    : 'Your account is suspended. Contact customer care for more information.'
+            });
+        }
+
         return res.json({
             success: true,
             message: `Restaurant ${isActive ? 'activated' : 'deactivated'} successfully`,
@@ -521,6 +598,31 @@ export const adminToggleRestaurantFeatured = async (req, res) => {
 
         restaurant.isFeaturedHome = isFeaturedHome;
         await restaurant.save();
+
+        const io = getIO();
+        if (io) {
+            io.to('admin_room').emit('restaurant:updated', {
+                restaurant: {
+                    _id: String(restaurant._id),
+                    name: restaurant.name,
+                    email: restaurant.email,
+                    restaurantName: restaurant.restaurantName,
+                    logo: restaurant.logo,
+                    location: restaurant.location,
+                    phone: restaurant.phone,
+                    cuisineType: restaurant.cuisineType,
+                    restaurantType: restaurant.restaurantType,
+                    serviceType: restaurant.serviceType,
+                    openingTime: restaurant.openingTime,
+                    closingTime: restaurant.closingTime,
+                    isActive: restaurant.isActive,
+                    isFeaturedHome: restaurant.isFeaturedHome,
+                    latitude: restaurant.latitude,
+                    longitude: restaurant.longitude,
+                    updatedAt: restaurant.updatedAt
+                }
+            });
+        }
 
         return res.json({
             success: true,

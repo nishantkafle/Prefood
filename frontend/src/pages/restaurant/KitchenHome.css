@@ -324,4 +324,57 @@
   .kh-home-page {
     padding: 1rem;
   }
+
+  .kh-panel {
+    padding: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .kh-panel-head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.6rem;
+    margin-bottom: 1rem;
+  }
+
+  .kh-card-grid,
+  .kh-selected-grid-full {
+    gap: 0.9rem;
+  }
+
+  .kh-card {
+    padding: 1rem;
+  }
+
+  .kh-card h3 {
+    font-size: 1.8rem;
+  }
+
+  .kh-table {
+    min-width: 640px;
+  }
+
+  .kh-table th,
+  .kh-table td {
+    padding: 0.75rem;
+    font-size: 0.85rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .content-header h1 {
+    font-size: 1.45rem;
+  }
+
+  .subtitle {
+    font-size: 0.88rem;
+  }
+
+  .kh-date-filter {
+    width: 100%;
+  }
+
+  .kh-date-filter input[type="date"] {
+    width: 100%;
+  }
 }

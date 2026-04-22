@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { Search, Store, Clock3, MapPin } from 'lucide-react';
+import { Search, Store, Clock3, MapPin, X, UtensilsCrossed } from 'lucide-react';
 import AppFooter from '../../components/shared/AppFooter';
 import PublicNavbar from '../../components/shared/PublicNavbar';
 import AuthModal from '../auth/AuthModal';
@@ -157,6 +157,7 @@ function PublicHome() {
             localStorage.setItem('authToken', token);
           }
           const accountRole = response.data?.data?.role || role;
+          localStorage.setItem('authRole', accountRole);
           navigate(DASHBOARD_BY_ROLE[accountRole] || '/user/dashboard');
           return;
         }
@@ -310,18 +311,7 @@ function PublicHome() {
         </div>
       </section>
 
-      {/* ── FLOATING SEARCH ── */}
-      <section className="ph-all-search-wrap">
-        <div className="ph-search-wrap">
-          <Search size={20} />
-          <input
-            type="text"
-            placeholder="Search by restaurant name, cuisine, or location..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-        </div>
-      </section>
+      {/* Search moved below */}
 
       {/* ── FEATURED SECTION ── */}
       <section className="ph-full-section">
@@ -358,33 +348,49 @@ function PublicHome() {
 
       {/* ── ALL RESTAURANTS SECTION ── */}
       <section className="ph-full-section">
+        {/* Relocated Search */}
+        <div className="ph-section-search-bar">
+          <div className="ph-search-wrap">
+            <Search size={20} />
+            <input
+              type="text"
+              placeholder="Search by restaurant name, cuisine, or location..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+
         <div className="ph-section-head">
           <h2>Explore More</h2>
           <span>Discover local favorites</span>
         </div>
-        <div className="ph-grid">
-          {filteredRestaurants.map((restaurant) => (
-            <article className="ph-card" key={restaurant._id}>
-              <div className="ph-card-top">
-                {restaurant.logo ? (
-                  <img src={restaurant.logo} alt={restaurant.restaurantName} className="ph-logo" />
-                ) : (
-                  <div className="ph-logo-fallback"><Store size={32} /></div>
-                )}
-                <div>
-                  <h3>{restaurant.restaurantName || 'Restaurant'}</h3>
-                  <p>{restaurant.cuisineType || 'Cuisine not set'}</p>
+        
+        <div className="ph-slider-container">
+          <div className="ph-grid ph-slider">
+            {filteredRestaurants.map((restaurant) => (
+              <article className="ph-card ph-slider-card" key={restaurant._id}>
+                <div className="ph-card-top">
+                  {restaurant.logo ? (
+                    <img src={restaurant.logo} alt={restaurant.restaurantName} className="ph-logo" />
+                  ) : (
+                    <div className="ph-logo-fallback"><Store size={32} /></div>
+                  )}
+                  <div>
+                    <h3>{restaurant.restaurantName || 'Restaurant'}</h3>
+                    <p>{restaurant.cuisineType || 'Cuisine not set'}</p>
+                  </div>
                 </div>
-              </div>
-              <div className="ph-meta">
-                <span><MapPin size={16} /> {restaurant.location || 'Location not set'}</span>
-              </div>
-              <button type="button" className="ph-view-btn" onClick={() => handleViewMenu(restaurant)}>See Menu</button>
-            </article>
-          ))}
-          {!loading && filteredRestaurants.length === 0 && (
-            <div className="ph-empty">No restaurants match your search.</div>
-          )}
+                <div className="ph-meta">
+                  <span><MapPin size={16} /> {restaurant.location || 'Location not set'}</span>
+                </div>
+                <button type="button" className="ph-view-btn" onClick={() => handleViewMenu(restaurant)}>See Menu</button>
+              </article>
+            ))}
+            {!loading && filteredRestaurants.length === 0 && (
+              <div className="ph-empty">No restaurants match your search.</div>
+            )}
+          </div>
         </div>
       </section>
 
@@ -396,30 +402,66 @@ function PublicHome() {
         <div className="ph-modal-overlay" onClick={closeMenuDrawer}>
           <div className="ph-modal" onClick={(e) => e.stopPropagation()}>
             <div className="ph-modal-head">
-              <h3>{selectedRestaurant.restaurantName} Menu</h3>
-              <button type="button" onClick={closeMenuDrawer}>Close</button>
+              <div className="ph-modal-title">
+                <h3>{selectedRestaurant.restaurantName} Menu</h3>
+                <span className="ph-modal-subtitle">{menuItems.length} dishes available</span>
+              </div>
+              <button type="button" className="ph-modal-close" onClick={closeMenuDrawer}>
+                <X size={24} />
+              </button>
             </div>
 
-            {menuLoading ? (
-              <div className="ph-empty">Loading menu…</div>
-            ) : menuItems.length === 0 ? (
-              <div className="ph-empty">Menu not available.</div>
-            ) : (
-              <div className="ph-menu-list">
-                {menuItems.map((item) => (
-                  <div key={item._id} className="ph-menu-item">
-                    <div className="ph-menu-info">
-                      <h4>{item.name}</h4>
-                      <p>{item.description}</p>
-                      <span>NPR {Number(item.price || 0).toFixed(2)}</span>
+            <div className="ph-modal-body">
+              {menuLoading ? (
+                <div className="ph-menu-status">
+                  <div className="ph-spinner"></div>
+                  <p>Loading curated menu...</p>
+                </div>
+              ) : menuItems.length === 0 ? (
+                <div className="ph-menu-status">
+                  <UtensilsCrossed size={48} />
+                  <p>Menu not available at the moment.</p>
+                </div>
+              ) : (
+                <div className="ph-menu-grid">
+                  {menuItems.map((item) => (
+                    <div key={item._id} className="ph-menu-card">
+                      <div className="ph-menu-item-img">
+                        {item.image ? (
+                          <img src={item.image} alt={item.name} />
+                        ) : (
+                          <div className="ph-menu-item-placeholder">
+                            <UtensilsCrossed size={32} />
+                          </div>
+                        )}
+                        {item.category && (
+                          <span className={`ph-item-tag ${item.category}`}>
+                            {item.category}
+                          </span>
+                        )}
+                      </div>
+                      <div className="ph-menu-item-content">
+                        <div className="ph-item-header">
+                          <h4>{item.name}</h4>
+                          <span className="ph-item-price">NPR {Number(item.price || 0).toFixed(0)}</span>
+                        </div>
+                        <p className="ph-item-desc">{item.description}</p>
+                        <div className="ph-item-footer">
+                          {item.prepTime && (
+                            <span className="ph-item-meta">
+                              <Clock3 size={14} /> {item.prepTime} mins
+                            </span>
+                          )}
+                          <button type="button" className="ph-item-order-btn" onClick={() => openAuthModal('register')}>
+                            Order Now
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <button type="button" className="ph-order-btn" onClick={() => openAuthModal('register')}>
-                      Order Now
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

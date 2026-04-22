@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { ChevronLeft, ChevronRight, Eye } from 'lucide-react';
 import '../shared/Dashboard.css';
+import { createAppSocket } from '../../config/socket';
 import NotificationBell from '../../components/shared/NotificationBell';
 import UserNavbar from '../../components/shared/UserNavbar';
 import './UserOrders.css';
@@ -23,6 +24,8 @@ function UserOrders() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [profile, setProfile] = useState(null);
+  const socketRef = useRef(null);
   
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -56,13 +59,45 @@ function UserOrders() {
   };
 
   useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await axios.get('/api/auth/profile', { withCredentials: true });
+        if (response.data.success) {
+          setProfile(response.data.data);
+        }
+      } catch (err) {
+        console.error('Error fetching profile:', err);
+      }
+    };
+    fetchProfile();
     fetchOrders();
   }, []);
 
   useEffect(() => {
-    const polling = setInterval(fetchOrders, 10000);
-    return () => clearInterval(polling);
-  }, []);
+    if (!profile?._id) return;
+
+    socketRef.current = createAppSocket();
+
+    socketRef.current.on('connect', () => {
+      socketRef.current.emit('joinUser', profile._id);
+    });
+
+    const handleOrderUpdate = () => {
+      fetchOrders();
+    };
+
+    socketRef.current.on('order:new', handleOrderUpdate);
+    socketRef.current.on('order:updated', handleOrderUpdate);
+    socketRef.current.on('orderUpdated', handleOrderUpdate);
+    socketRef.current.on('order:deleted', handleOrderUpdate);
+
+    return () => {
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('leaveUser', profile._id);
+      }
+      socketRef.current?.disconnect();
+    };
+  }, [profile?._id]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -213,18 +248,20 @@ function UserOrders() {
             </div>
             
             {totalPages > 1 && (
-              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px', gap: '16px', background: '#fff', borderTop: '1px solid #f4f4f5' }}>
+              <div className="orders-pagination-row" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '16px', gap: '16px', background: '#fff', borderTop: '1px solid #f4f4f5' }}>
                 <button
+                  className="orders-pagination-btn"
                   onClick={() => handlePageChange(currentPage - 1)}
                   disabled={currentPage === 1}
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 16px', border: '1px solid #e4e4e7', background: currentPage === 1 ? '#fafafa' : '#fff', color: currentPage === 1 ? '#a1a1aa' : '#18181b', borderRadius: '8px', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', fontWeight: '600' }}
                 >
                   <ChevronLeft size={16} /> Previous
                 </button>
-                <div style={{ fontSize: '14px', fontWeight: '600', color: '#71717a' }}>
+                <div className="orders-pagination-text" style={{ fontSize: '14px', fontWeight: '600', color: '#71717a' }}>
                   Page <span style={{ color: '#18181b' }}>{currentPage}</span> of <span style={{ color: '#18181b' }}>{totalPages}</span>
                 </div>
                 <button
+                  className="orders-pagination-btn"
                   onClick={() => handlePageChange(currentPage + 1)}
                   disabled={currentPage === totalPages}
                   style={{ display: 'flex', alignItems: 'center', gap: '4px', padding: '8px 16px', border: '1px solid #e4e4e7', background: currentPage === totalPages ? '#fafafa' : '#fff', color: currentPage === totalPages ? '#a1a1aa' : '#18181b', borderRadius: '8px', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', fontWeight: '600' }}

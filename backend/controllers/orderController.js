@@ -67,6 +67,47 @@ const validateDineInAt = (dineInAt, { required = false } = {}) => {
     return { valid: true, parsedDineInAt };
 };
 
+const parseClockToMinutes = (timeString = '') => {
+    if (typeof timeString !== 'string') return null;
+    const match = timeString.trim().match(/^(\d{1,2}):(\d{2})$/);
+    if (!match) return null;
+
+    const hours = Number(match[1]);
+    const minutes = Number(match[2]);
+
+    if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+    if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+
+    return (hours * 60) + minutes;
+};
+
+const getRestaurantOperatingState = (restaurant, now = new Date()) => {
+    const openingMinutes = parseClockToMinutes(restaurant?.openingTime);
+    const closingMinutes = parseClockToMinutes(restaurant?.closingTime);
+
+    if (openingMinutes === null || closingMinutes === null) {
+        return { isConfigured: false, isOpen: true };
+    }
+
+    const nowMinutes = (now.getHours() * 60) + now.getMinutes();
+
+    if (openingMinutes === closingMinutes) {
+        return { isConfigured: true, isOpen: true };
+    }
+
+    if (openingMinutes < closingMinutes) {
+        return {
+            isConfigured: true,
+            isOpen: nowMinutes >= openingMinutes && nowMinutes < closingMinutes
+        };
+    }
+
+    return {
+        isConfigured: true,
+        isOpen: nowMinutes >= openingMinutes || nowMinutes < closingMinutes
+    };
+};
+
 const getScheduleReleaseTimestamp = (order) => {
     if (!order?.dineInAt) return null;
     const dineInTimestamp = new Date(order.dineInAt).getTime();
@@ -175,6 +216,22 @@ export const createUserPreorder = async (req, res) => {
 
         if (!items || items.length === 0) {
             return res.json({ success: false, message: 'At least one item is required' });
+        }
+
+        const restaurant = await userModel
+            .findOne({ _id: restaurantId, role: 'restaurant' })
+            .select('openingTime closingTime');
+
+        if (!restaurant) {
+            return res.status(404).json({ success: false, message: 'Restaurant not found' });
+        }
+
+        const operatingState = getRestaurantOperatingState(restaurant);
+        if (operatingState.isConfigured && !operatingState.isOpen) {
+            return res.status(400).json({
+                success: false,
+                message: `Restaurant is currently closed. Opening time: ${restaurant.openingTime}. Closing time: ${restaurant.closingTime}.`
+            });
         }
 
         const scheduleValidation = validateDineInAt(dineInAt, { required: true });
@@ -552,6 +609,27 @@ export const deleteOrder = async (req, res) => {
 
         if (!order) {
             return res.json({ success: false, message: 'Order not found' });
+        }
+
+        if (order.customerId) {
+            await createNotification({
+                recipientId: order.customerId,
+                type: 'order-status',
+                title: 'Order removed',
+                message: `Your order ${order.orderId} was removed by the restaurant`,
+                meta: {
+                    route: '/user/orders',
+                    orderId: String(order._id)
+                }
+            });
+        }
+
+        const io = getIO();
+        if (io) {
+            const payload = { _id: order._id, orderId: order.orderId };
+            io.to(`restaurant_orders_${order.restaurantId.toString()}`).emit('order:deleted', payload);
+            io.to(`order_${order._id.toString()}`).emit('order:deleted', payload);
+            if (order.customerId) io.to(`user_${order.customerId.toString()}`).emit('order:deleted', payload);
         }
 
         return res.json({ success: true, message: 'Order deleted successfully' });

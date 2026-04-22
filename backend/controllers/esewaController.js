@@ -2,7 +2,10 @@ import crypto from 'crypto';
 import { randomUUID } from 'crypto';
 import menuModel from '../models/menuModel.js';
 import orderModel from '../models/orderModel.js';
+import userModel from '../models/userModel.js';
 import esewaTransactionModel from '../models/esewaTransactionModel.js';
+import { getIO } from '../utils/socket.js';
+import { createNotification } from '../utils/notifications.js';
 
 const ESEWA_SECRET_KEY = process.env.ESEWA_SECRET_KEY || '8gBm/:&EnhH.1/q';
 const ESEWA_PRODUCT_CODE = process.env.ESEWA_PRODUCT_CODE || 'EPAYTEST';
@@ -20,9 +23,95 @@ const buildSignature = (totalAmount, transactionUuid, productCode) => {
   return crypto.createHmac('sha256', ESEWA_SECRET_KEY).update(signingString).digest('base64');
 };
 
+const parseClockToMinutes = (timeString = '') => {
+  if (typeof timeString !== 'string') return null;
+  const match = timeString.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+
+  return (hours * 60) + minutes;
+};
+
+const getRestaurantOperatingState = (restaurant, now = new Date()) => {
+  const openingMinutes = parseClockToMinutes(restaurant?.openingTime);
+  const closingMinutes = parseClockToMinutes(restaurant?.closingTime);
+
+  if (openingMinutes === null || closingMinutes === null) {
+    return { isConfigured: false, isOpen: true };
+  }
+
+  const nowMinutes = (now.getHours() * 60) + now.getMinutes();
+
+  if (openingMinutes === closingMinutes) {
+    return { isConfigured: true, isOpen: true };
+  }
+
+  if (openingMinutes < closingMinutes) {
+    return {
+      isConfigured: true,
+      isOpen: nowMinutes >= openingMinutes && nowMinutes < closingMinutes
+    };
+  }
+
+  return {
+    isConfigured: true,
+    isOpen: nowMinutes >= openingMinutes || nowMinutes < closingMinutes
+  };
+};
+
 const generateOrderId = async (restaurantId) => {
   const count = await orderModel.countDocuments({ restaurantId });
   return `ORD-${String(count + 1).padStart(4, '0')}`;
+};
+
+const createOrderFromDraft = async (transaction) => {
+  const draft = transaction?.orderDraft;
+  if (!draft?.restaurantId || !Array.isArray(draft?.items) || draft.items.length === 0) {
+    return null;
+  }
+
+  const orderId = await generateOrderId(draft.restaurantId);
+
+  const order = await orderModel.create({
+    orderId,
+    customerId: draft.customerId,
+    customerName: draft.customerName,
+    customerPhone: draft.customerPhone || '',
+    dineInAt: draft.dineInAt,
+    items: draft.items,
+    totalAmount: draft.totalAmount,
+    estimatedTime: draft.estimatedTime,
+    restaurantId: draft.restaurantId,
+    paymentMethod: 'esewa',
+    paymentStatus: 'completed',
+    paymentTransactionUuid: transaction.transactionUuid
+  });
+
+  await createNotification({
+    recipientId: draft.restaurantId,
+    type: 'order-created',
+    title: 'New order received',
+    message: `${draft.customerName || 'Customer'} placed order ${orderId} for ${new Date(draft.dineInAt).toLocaleString()}`,
+    meta: {
+      route: '/restaurant/dashboard',
+      orderId: String(order._id)
+    }
+  });
+
+  const io = getIO();
+  if (io) {
+    io.to(`restaurant_orders_${draft.restaurantId}`).emit('order:new', order);
+    if (draft.customerId) {
+      io.to(`user_${String(draft.customerId)}`).emit('order:new', order);
+    }
+  }
+
+  return order;
 };
 
 const updateFailedTransaction = async (transactionUuid, gatewayResponse = null) => {
@@ -34,11 +123,6 @@ const updateFailedTransaction = async (transactionUuid, gatewayResponse = null) 
   transaction.status = 'failed';
   transaction.gatewayResponse = gatewayResponse;
   await transaction.save();
-
-  await orderModel.findByIdAndUpdate(transaction.orderId, {
-    paymentStatus: 'failed',
-    status: 'cancelled'
-  });
 };
 
 const extractTransactionUuidFromFailureQuery = (query) => {
@@ -127,22 +211,33 @@ const completeTransactionByDecodedData = async (decodedData) => {
     return { ok: false, reason: 'verification_failed' };
   }
 
+  let orderId = transaction.orderId ? String(transaction.orderId) : '';
+
+  if (!orderId) {
+    const createdOrder = await createOrderFromDraft(transaction);
+    if (!createdOrder) {
+      await updateFailedTransaction(transactionUuid, decodedData);
+      return { ok: false, reason: 'order_draft_invalid' };
+    }
+
+    orderId = String(createdOrder._id);
+    transaction.orderId = createdOrder._id;
+  }
+
   if (transaction.status !== 'completed') {
     transaction.status = 'completed';
     transaction.gatewayResponse = decodedData;
     await transaction.save();
-
-    await orderModel.findByIdAndUpdate(transaction.orderId, {
-      paymentStatus: 'completed',
-      paymentTransactionUuid: transactionUuid
-    });
+  } else if (!transaction.gatewayResponse) {
+    transaction.gatewayResponse = decodedData;
+    await transaction.save();
   }
 
   return {
     ok: true,
     reason: 'success',
     transactionUuid,
-    orderId: String(transaction.orderId)
+    orderId
   };
 };
 
@@ -156,6 +251,22 @@ export const initiateEsewaPayment = async (req, res) => {
 
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: 'At least one item is required' });
+    }
+
+    const restaurant = await userModel
+      .findOne({ _id: restaurantId, role: 'restaurant' })
+      .select('openingTime closingTime');
+
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Restaurant not found' });
+    }
+
+    const operatingState = getRestaurantOperatingState(restaurant);
+    if (operatingState.isConfigured && !operatingState.isOpen) {
+      return res.status(400).json({
+        success: false,
+        message: `Restaurant is currently closed. Opening time: ${restaurant.openingTime}. Closing time: ${restaurant.closingTime}.`
+      });
     }
 
     if (!dineInAt) {
@@ -219,10 +330,7 @@ export const initiateEsewaPayment = async (req, res) => {
       };
     });
 
-    const orderId = await generateOrderId(restaurantId);
-
-    const order = await orderModel.create({
-      orderId,
+    const orderDraft = {
       customerId: req.user?._id,
       customerName,
       customerPhone: customerPhone || '',
@@ -233,7 +341,7 @@ export const initiateEsewaPayment = async (req, res) => {
       restaurantId,
       paymentMethod: 'esewa',
       paymentStatus: 'pending'
-    });
+    };
 
     const transactionUuid = randomUUID();
     const formattedTotalAmount = Number(totalAmount).toFixed(2);
@@ -241,10 +349,10 @@ export const initiateEsewaPayment = async (req, res) => {
 
     await esewaTransactionModel.create({
       transactionUuid,
-      orderId: order._id,
       userId: req.user._id,
       amount: Number(formattedTotalAmount),
       productCode: ESEWA_PRODUCT_CODE,
+      orderDraft,
       status: 'pending'
     });
 
@@ -266,7 +374,6 @@ export const initiateEsewaPayment = async (req, res) => {
       success: true,
       checkoutUrl: ESEWA_CHECKOUT_URL,
       payload,
-      orderId: order._id,
       transaction_uuid: transactionUuid
     });
   } catch (error) {

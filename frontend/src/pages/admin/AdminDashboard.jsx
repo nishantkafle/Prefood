@@ -1,25 +1,34 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { LayoutDashboard, Users, Store, LogOut } from 'lucide-react';
-import { uploadImageToCloudinary } from '../../utils/cloudinary';
+import { Pencil, Trash2, ShieldCheck, Mail, User, MapPin, Phone, Coffee, Clock, Star, Power, X } from 'lucide-react';
+import { createAppSocket } from '../../config/socket';
+import AdminLayout from '../../components/admin/AdminLayout';
+import Pagination from '../../components/admin/Pagination';
+import ConfirmModal from '../../components/shared/ConfirmModal';
 import './AdminDashboard.css';
 
 const API = '/api/auth';
+const ITEMS_PER_PAGE = 5;
 
-// Small Modal
-function Modal({ title, onClose, onSave, children }) {
+// Premium Modal Component
+function Modal({ title, onClose, onSave, children, saving }) {
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-box" onClick={(e) => e.stopPropagation()}>
+      <div className="modal-box premium-edit-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3>{title}</h3>
-          <button className="modal-close" onClick={onClose}>X</button>
+          <div className="modal-title-group">
+            <h3>{title}</h3>
+            <div className="modal-subtitle">Update information and save changes</div>
+          </div>
+          <button className="modal-close" onClick={onClose}><X size={20} /></button>
         </div>
-        <div className="modal-body">{children}</div>
+        <div className="modal-body custom-scrollbar">{children}</div>
         <div className="modal-footer">
-          <button className="btn-cancel" onClick={onClose}>Cancel</button>
-          <button className="btn-save" onClick={onSave}>Save Changes</button>
+          <button className="btn-cancel" onClick={onClose} disabled={saving}>Cancel</button>
+          <button className="btn-save premium-save-btn" onClick={onSave} disabled={saving}>
+            {saving ? <div className="spinner"></div> : 'Save Changes'}
+          </button>
         </div>
       </div>
     </div>
@@ -50,17 +59,32 @@ function EditUserModal({ user, onClose, onSaved }) {
   };
 
   return (
-    <Modal title="Edit User" onClose={onClose} onSave={handleSave}>
-      {err && <p className="modal-err">{err}</p>}
-      <div className="form-group">
-        <label>Name</label>
-        <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+    <Modal title="Edit User Account" onClose={onClose} onSave={handleSave} saving={saving}>
+      {err && <div className="modal-err-box"><div className="err-icon">!</div>{err}</div>}
+      <div className="premium-form-grid">
+        <div className="form-group floating-label">
+          <label>Full Name</label>
+          <div className="input-with-icon">
+            <User size={18} />
+            <input 
+              value={form.name} 
+              onChange={(e) => setForm({ ...form, name: e.target.value })} 
+              placeholder="Enter user's full name"
+            />
+          </div>
+        </div>
+        <div className="form-group floating-label">
+          <label>Email Address</label>
+          <div className="input-with-icon">
+            <Mail size={18} />
+            <input 
+              value={form.email} 
+              onChange={(e) => setForm({ ...form, email: e.target.value })} 
+              placeholder="e.g. user@example.com"
+            />
+          </div>
+        </div>
       </div>
-      <div className="form-group">
-        <label>Email</label>
-        <input value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
-      </div>
-      {saving && <p className="saving-text">Saving...</p>}
     </Modal>
   );
 }
@@ -82,10 +106,17 @@ function EditRestaurantModal({ restaurant, onClose, onSaved }) {
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState('');
 
-  const field = (label, key) => (
-    <div className="form-group" key={key}>
+  const field = (label, key, icon) => (
+    <div className="form-group premium-field" key={key}>
       <label>{label}</label>
-      <input value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} />
+      <div className="input-with-icon">
+        {icon}
+        <input 
+          value={form[key]} 
+          onChange={(e) => setForm({ ...form, [key]: e.target.value })} 
+          placeholder={`Enter ${label.toLowerCase()}`}
+        />
+      </div>
     </div>
   );
 
@@ -107,19 +138,24 @@ function EditRestaurantModal({ restaurant, onClose, onSaved }) {
   };
 
   return (
-    <Modal title="Edit Restaurant" onClose={onClose} onSave={handleSave}>
-      {err && <p className="modal-err">{err}</p>}
-      {field('Owner Name', 'name')}
-      {field('Email', 'email')}
-      {field('Restaurant Name', 'restaurantName')}
-      {field('Location', 'location')}
-      {field('Phone', 'phone')}
-      {field('Cuisine Type', 'cuisineType')}
-      {field('Restaurant Type', 'restaurantType')}
-      {field('Service Type', 'serviceType')}
-      {field('Opening Time', 'openingTime')}
-      {field('Closing Time', 'closingTime')}
-      {saving && <p className="saving-text">Saving...</p>}
+    <Modal title="Edit Restaurant Profile" onClose={onClose} onSave={handleSave} saving={saving}>
+      {err && <div className="modal-err-box"><div className="err-icon">!</div>{err}</div>}
+      <div className="premium-form-grid res-edit-grid">
+        {field('Owner Name', 'name', <User size={18} />)}
+        {field('Email', 'email', <Mail size={18} />)}
+        {field('Restaurant Name', 'restaurantName', <Coffee size={18} />)}
+        {field('Location', 'location', <MapPin size={18} />)}
+        {field('Phone', 'phone', <Phone size={18} />)}
+        {field('Cuisine Type', 'cuisineType', <Coffee size={18} />)}
+        <div className="form-row-2">
+          {field('Restaurant Type', 'restaurantType', <Coffee size={18} />)}
+          {field('Service Type', 'serviceType', <Coffee size={18} />)}
+        </div>
+        <div className="form-row-2">
+          {field('Opening Time', 'openingTime', <Clock size={18} />)}
+          {field('Closing Time', 'closingTime', <Clock size={18} />)}
+        </div>
+      </div>
     </Modal>
   );
 }
@@ -134,11 +170,13 @@ function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [editUser, setEditUser] = useState(null);
   const [editRestaurant, setEditRestaurant] = useState(null);
-  const [confirmDelete, setConfirmDelete] = useState(null); // { type, id, name }
+  const [confirmDelete, setConfirmDelete] = useState(null); 
   const [toast, setToast] = useState('');
-  const [homeBanner, setHomeBanner] = useState('');
-  const [bannerDraft, setBannerDraft] = useState('');
-  const [bannerSaving, setBannerSaving] = useState(false);
+  const [socketReady, setSocketReady] = useState(false);
+
+  const [userPage, setUserPage] = useState(1);
+  const [restaurantPage, setRestaurantPage] = useState(1);
+  const socketRef = React.useRef(null);
 
   const showToast = (msg) => {
     setToast(msg);
@@ -148,29 +186,43 @@ function AdminDashboard() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [statsRes, usersRes, restsRes, bannerRes] = await Promise.all([
+      const [statsRes, usersRes, restsRes] = await Promise.all([
         axios.get(`${API}/admin/stats`, { withCredentials: true }),
         axios.get(`${API}/admin/users`, { withCredentials: true }),
-        axios.get(`${API}/admin/restaurants`, { withCredentials: true }),
-        axios.get(`${API}/admin/home-banner`, { withCredentials: true })
+        axios.get(`${API}/admin/restaurants`, { withCredentials: true })
       ]);
       if (statsRes.data?.success) setStats(statsRes.data.data || { totalUsers: 0, totalRestaurants: 0 });
       if (usersRes.data?.success) setUsers(usersRes.data.data || []);
       if (restsRes.data?.success) setRestaurants(restsRes.data.data || []);
-      if (bannerRes.data?.success) {
-        const banner = bannerRes.data?.data?.bannerImage || '';
-        setHomeBanner(banner);
-        setBannerDraft(banner);
-      }
     } catch {
-      // handle silently
     } finally {
       setLoading(false);
     }
   }, []);
 
+  const upsertRestaurant = useCallback((updatedRestaurant) => {
+    if (!updatedRestaurant?._id) return;
+
+    setRestaurants((prev) => {
+      const exists = prev.some((restaurant) => String(restaurant._id) === String(updatedRestaurant._id));
+      if (!exists) {
+        return [updatedRestaurant, ...prev];
+      }
+
+      return prev.map((restaurant) => (
+        String(restaurant._id) === String(updatedRestaurant._id)
+          ? { ...restaurant, ...updatedRestaurant }
+          : restaurant
+      ));
+    });
+  }, []);
+
+  const removeRestaurant = useCallback((restaurantId) => {
+    if (!restaurantId) return;
+    setRestaurants((prev) => prev.filter((restaurant) => String(restaurant._id) !== String(restaurantId)));
+  }, []);
+
   useEffect(() => {
-    // Verify admin access
     axios.get(`${API}/profile`, { withCredentials: true }).then((res) => {
       if (!res.data.success || res.data.data.role !== 'admin') {
         navigate('/');
@@ -179,6 +231,40 @@ function AdminDashboard() {
       }
     }).catch(() => navigate('/'));
   }, [navigate, fetchAll]);
+
+  useEffect(() => {
+    socketRef.current = createAppSocket();
+
+    socketRef.current.on('connect', () => {
+      socketRef.current.emit('joinAdmin');
+      setSocketReady(true);
+    });
+
+    socketRef.current.on('restaurant:updated', (payload) => {
+      if (payload?.restaurant) {
+        upsertRestaurant(payload.restaurant);
+      }
+    });
+
+    socketRef.current.on('restaurant:statusChanged', (payload) => {
+      if (payload?.restaurant) {
+        upsertRestaurant(payload.restaurant);
+      }
+    });
+
+    socketRef.current.on('restaurant:deleted', ({ restaurantId }) => {
+      removeRestaurant(restaurantId);
+    });
+
+    return () => {
+      if (socketRef.current?.connected) {
+        socketRef.current.emit('leaveAdmin');
+      }
+      socketRef.current?.disconnect();
+      socketRef.current = null;
+      setSocketReady(false);
+    };
+  }, [removeRestaurant, upsertRestaurant]);
 
   const handleLogout = async () => {
     try {
@@ -199,7 +285,11 @@ function AdminDashboard() {
       const res = await axios.delete(url, { withCredentials: true });
       if (res.data.success) {
         showToast(`${type === 'user' ? 'User' : 'Restaurant'} deleted successfully`);
-        fetchAll();
+        if (type === 'restaurant') {
+          removeRestaurant(id);
+        } else {
+          fetchAll();
+        }
       }
     } catch {
       showToast('Delete failed');
@@ -210,6 +300,12 @@ function AdminDashboard() {
 
   const handleToggleRestaurantStatus = async (restaurantId, nextActiveStatus) => {
     try {
+      setRestaurants((prev) => prev.map((restaurant) => (
+        String(restaurant._id) === String(restaurantId)
+          ? { ...restaurant, isActive: nextActiveStatus }
+          : restaurant
+      )));
+
       const res = await axios.patch(
         `${API}/admin/restaurant/${restaurantId}/status`,
         { isActive: nextActiveStatus },
@@ -218,17 +314,24 @@ function AdminDashboard() {
 
       if (res.data.success) {
         showToast(`Restaurant ${nextActiveStatus ? 'activated' : 'deactivated'} successfully`);
-        fetchAll();
       } else {
+        fetchAll();
         showToast(res.data.message || 'Status update failed');
       }
     } catch {
+      fetchAll();
       showToast('Status update failed');
     }
   };
 
   const handleToggleRestaurantFeatured = async (restaurantId, nextFeaturedStatus) => {
     try {
+      setRestaurants((prev) => prev.map((restaurant) => (
+        String(restaurant._id) === String(restaurantId)
+          ? { ...restaurant, isFeaturedHome: nextFeaturedStatus }
+          : restaurant
+      )));
+
       const res = await axios.patch(
         `${API}/admin/restaurant/${restaurantId}/featured`,
         { isFeaturedHome: nextFeaturedStatus },
@@ -237,318 +340,318 @@ function AdminDashboard() {
 
       if (res.data.success) {
         showToast(nextFeaturedStatus ? 'Restaurant featured on homepage' : 'Restaurant removed from homepage');
-        fetchAll();
       } else {
+        fetchAll();
         showToast(res.data.message || 'Featured update failed');
       }
     } catch {
+      fetchAll();
       showToast('Featured update failed');
     }
   };
 
-  const handleBannerFileChange = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const paginatedUsers = useMemo(() => {
+    const start = (userPage - 1) * ITEMS_PER_PAGE;
+    return users.slice(start, start + ITEMS_PER_PAGE);
+  }, [users, userPage]);
 
-    try {
-      setBannerSaving(true);
-      const imageUrl = await uploadImageToCloudinary(file);
-      setBannerDraft(imageUrl);
-    } catch (err) {
-      showToast(err.message || 'Failed to upload banner preview');
-    } finally {
-      setBannerSaving(false);
-    }
-  };
-
-  const handleSaveBanner = async () => {
-    setBannerSaving(true);
-    try {
-      const res = await axios.put(
-        `${API}/admin/home-banner`,
-        { bannerImage: bannerDraft || '' },
-        { withCredentials: true }
-      );
-      if (res.data.success) {
-        setHomeBanner(bannerDraft || '');
-        showToast('Homepage banner updated');
-      } else {
-        showToast(res.data.message || 'Banner update failed');
-      }
-    } catch {
-      showToast('Banner update failed');
-    } finally {
-      setBannerSaving(false);
-    }
-  };
+  const paginatedRestaurants = useMemo(() => {
+    const start = (restaurantPage - 1) * ITEMS_PER_PAGE;
+    return restaurants.slice(start, start + ITEMS_PER_PAGE);
+  }, [restaurants, restaurantPage]);
 
   const featuredCount = (restaurants || []).filter((r) => !!r?.isFeaturedHome).length;
 
+  const dashboardTitle = useMemo(() => {
+    if (activeTab === 'overview') return 'Dashboard Overview';
+    if (activeTab === 'users') return 'Manage Users';
+    if (activeTab === 'restaurants') return 'Manage Restaurants';
+    return 'Admin Dashboard';
+  }, [activeTab]);
+
+  const restaurantTableSubtitle = socketReady ? 'Live restaurant sync enabled' : 'Connecting live updates...';
+
   return (
-    <div className="admin-wrapper">
-      {/* Sidebar */}
-      <aside className="admin-sidebar">
-        <div className="sidebar-brand">
-          <span>HotStop</span>
+    <AdminLayout
+      activeTab={activeTab}
+      setActiveTab={setActiveTab}
+      handleLogout={handleLogout}
+      title={dashboardTitle}
+    >
+      {loading ? (
+        <div className="admin-loading">
+          <div className="spinner-large"></div>
+          <p>Analyzing Platform Data...</p>
         </div>
-        <nav className="sidebar-nav">
-          <button
-            className={`nav-item ${activeTab === 'overview' ? 'active' : ''}`}
-            onClick={() => setActiveTab('overview')}
-          >
-            <LayoutDashboard size={18} />
-            Overview
-          </button>
-          <button
-            className={`nav-item ${activeTab === 'users' ? 'active' : ''}`}
-            onClick={() => setActiveTab('users')}
-          >
-            <Users size={18} />
-            Users
-          </button>
-          <button
-            className={`nav-item ${activeTab === 'restaurants' ? 'active' : ''}`}
-            onClick={() => setActiveTab('restaurants')}
-          >
-            <Store size={18} />
-            Restaurants
-          </button>
-        </nav>
-        <button className="sidebar-logout" onClick={handleLogout}>
-          <LogOut size={18} />
-          Logout
-        </button>
-      </aside>
-
-      {/* Main Content */}
-      <main className="admin-main">
-        {/* Top Bar */}
-        <header className="admin-topbar">
-          <h1 className="topbar-title">
-            {activeTab === 'overview' && 'Dashboard Overview'}
-            {activeTab === 'users' && 'Manage Users'}
-            {activeTab === 'restaurants' && 'Manage Restaurants'}
-          </h1>
-          <div className="topbar-badge">Admin</div>
-        </header>
-
-        {loading ? (
-          <div className="admin-loading">Loading data...</div>
-        ) : (
-          <>
-            {/* Overview Tab */}
-            {activeTab === 'overview' && (
-              <div className="overview-grid">
-                <div className="stat-card stat-users">
-                  <div className="stat-info">
-                    <div className="stat-number">{stats.totalUsers}</div>
-                    <div className="stat-label">Registered Users</div>
-                  </div>
-                </div>
-                <div className="stat-card stat-restaurants">
-                  <div className="stat-info">
-                    <div className="stat-number">{stats.totalRestaurants}</div>
-                    <div className="stat-label">Registered Restaurants</div>
-                  </div>
-                </div>
-                <div className="stat-card stat-total">
-                  <div className="stat-info">
-                    <div className="stat-number">{stats.totalUsers + stats.totalRestaurants}</div>
-                    <div className="stat-label">Total Accounts</div>
-                  </div>
-                </div>
-
-                <div className="stat-card stat-featured">
-                  <div className="stat-info">
-                    <div className="stat-number">{featuredCount}/7</div>
-                    <div className="stat-label">Homepage Featured Restaurants</div>
-                  </div>
-                </div>
-
-                <div className="banner-admin-card">
-                  <h3>Homepage Banner</h3>
-                  <p>Upload one banner image shown on public homepage.</p>
-                  <input type="file" accept="image/*" onChange={handleBannerFileChange} />
-                  {bannerDraft && <img src={bannerDraft} alt="Homepage banner preview" className="banner-preview" />}
-                  <div className="banner-actions">
-                    <button className="btn-save" onClick={handleSaveBanner} disabled={bannerSaving}>
-                      {bannerSaving ? 'Saving...' : 'Save Banner'}
-                    </button>
-                    <button className="btn-cancel" onClick={() => setBannerDraft(homeBanner || '')}>Reset</button>
-                  </div>
-                </div>
-
-                {/* Quick tables */}
-                <div className="recent-section">
-                  <h3>Recent Users</h3>
-                  <table className="admin-table">
-                    <thead>
-                      <tr><th>Name</th><th>Email</th></tr>
-                    </thead>
-                    <tbody>
-                      {users.slice(0, 5).map((u) => (
-                        <tr key={u._id}><td>{u.name}</td><td>{u.email}</td></tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <div className="recent-section">
-                  <h3>Recent Restaurants</h3>
-                  <table className="admin-table">
-                    <thead>
-                      <tr><th>Restaurant</th><th>Location</th></tr>
-                    </thead>
-                    <tbody>
-                      {restaurants.slice(0, 5).map((r) => (
-                        <tr key={r._id}><td>{r.restaurantName || r.name}</td><td>{r.location || '-'}</td></tr>
-                      ))}
-                    </tbody>
-                  </table>
+      ) : (
+        <div className="admin-content-fade">
+          {activeTab === 'overview' && (
+            <div className="overview-grid">
+              <div className="stat-card stat-users">
+                <div className="stat-info">
+                  <div className="stat-number">{stats.totalUsers}</div>
+                  <div className="stat-label">Registered Users</div>
                 </div>
               </div>
-            )}
-
-            {/* Users Tab */}
-            {activeTab === 'users' && (
-              <div className="table-section">
-                <div className="table-header-row">
-                  <h2>All Users ({users.length})</h2>
+              <div className="stat-card stat-restaurants">
+                <div className="stat-info">
+                  <div className="stat-number">{stats.totalRestaurants}</div>
+                  <div className="stat-label">Registered Restaurants</div>
                 </div>
-                <table className="admin-table full-table">
+              </div>
+              <div className="stat-card stat-total">
+                <div className="stat-info">
+                  <div className="stat-number">{stats.totalUsers + stats.totalRestaurants}</div>
+                  <div className="stat-label">Total Accounts</div>
+                </div>
+              </div>
+
+              <div className="stat-card stat-featured">
+                <div className="stat-info">
+                  <div className="stat-number">{featuredCount}/7</div>
+                  <div className="stat-label">Homepage Featured</div>
+                </div>
+              </div>
+
+              <div className="recent-section">
+                <h3>Recent Active Users</h3>
+                <table className="admin-table">
                   <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Name</th>
-                      <th>Email</th>
-                      <th>Verified</th>
-                      <th>Actions</th>
-                    </tr>
+                    <tr><th>User Name</th></tr>
                   </thead>
                   <tbody>
-                    {users.length === 0 && (
-                      <tr><td colSpan="5" className="empty-row">No users found</td></tr>
-                    )}
-                    {users.map((u, idx) => (
+                    {users.slice(0, 5).map((u) => (
                       <tr key={u._id}>
-                        <td>{idx + 1}</td>
                         <td>{u.name}</td>
-                        <td>{u.email}</td>
-                        <td>
-                          <span className={`badge ${u.isAccountVerified ? 'badge-green' : 'badge-grey'}`}>
-                            {u.isAccountVerified ? 'Verified' : 'Unverified'}
-                          </span>
-                        </td>
-                        <td className="action-cell">
-                          <button className="btn-edit" onClick={() => setEditUser(u)}>Edit</button>
-                          <button className="btn-delete" onClick={() => setConfirmDelete({ type: 'user', id: u._id, name: u.name })}>Delete</button>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
 
-            {/* Restaurants Tab */}
-            {activeTab === 'restaurants' && (
-              <div className="table-section">
-                <div className="table-header-row">
-                  <h2>All Restaurants ({restaurants.length})</h2>
-                </div>
-                <table className="admin-table full-table">
+              <div className="recent-section">
+                <h3>Recently Registered Restaurants</h3>
+                <table className="admin-table">
                   <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Restaurant Name</th>
-                      <th>Owner</th>
-                      <th>Email</th>
-                      <th>Location</th>
-                      <th>Phone</th>
-                      <th>Cuisine</th>
-                      <th>Hours</th>
-                      <th>Homepage</th>
-                      <th>Status</th>
-                      <th>Actions</th>
-                    </tr>
+                    <tr><th>Restaurant</th><th>Join Date</th></tr>
                   </thead>
                   <tbody>
-                    {restaurants.length === 0 && (
-                      <tr><td colSpan="11" className="empty-row">No restaurants found</td></tr>
-                    )}
-                    {restaurants.map((r, idx) => (
-                      <tr key={r._id}>
-                        <td>{idx + 1}</td>
-                        <td><strong>{r.restaurantName || '-'}</strong></td>
-                        <td>{r.name}</td>
-                        <td>{r.email}</td>
-                        <td>{r.location || '-'}</td>
-                        <td>{r.phone || '-'}</td>
-                        <td>{r.cuisineType || '-'}</td>
-                        <td>{r.openingTime && r.closingTime ? `${r.openingTime} - ${r.closingTime}` : '-'}</td>
-                        <td>
-                          <button
-                            className={`status-toggle ${r.isFeaturedHome ? 'active' : 'inactive'}`}
-                            onClick={() => handleToggleRestaurantFeatured(r._id, !r.isFeaturedHome)}
-                          >
-                            {r.isFeaturedHome ? 'Featured' : 'Not Featured'}
-                          </button>
-                        </td>
-                        <td>
-                          <button
-                            className={`status-toggle ${r.isActive === false ? 'inactive' : 'active'}`}
-                            onClick={() => handleToggleRestaurantStatus(r._id, r.isActive === false)}
-                          >
-                            {r.isActive === false ? 'Inactive' : 'Active'}
-                          </button>
-                        </td>
-                        <td className="action-cell">
-                          <button className="btn-edit" onClick={() => setEditRestaurant(r)}>Edit</button>
-                          <button className="btn-delete" onClick={() => setConfirmDelete({ type: 'restaurant', id: r._id, name: r.restaurantName || r.name })}>Delete</button>
-                        </td>
-                      </tr>
+                    {restaurants.slice(0, 5).map((r) => (
+                      <tr key={r._id}><td>{r.restaurantName || r.name}</td><td>{new Date(r.createdAt).toLocaleDateString()}</td></tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            )}
-          </>
-        )}
-      </main>
+            </div>
+          )}
 
-      {/* Toast */}
+          {activeTab === 'users' && (
+            <div className="table-section">
+              <div className="table-header-row">
+                <h2>All Verified Users <span className="entity-count">{users.length}</span></h2>
+              </div>
+              <div className="premium-table-card">
+                <div className="table-responsive">
+                  <table className="admin-table full-table users-table">
+                    <thead>
+                      <tr>
+                        <th className="users-col-index">#</th>
+                        <th>Account Name</th>
+                        <th>Email Identity</th>
+                        <th className="users-col-actions">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedUsers.length === 0 && (
+                        <tr><td colSpan="4" className="empty-row">No users detected on the platform</td></tr>
+                      )}
+                      {paginatedUsers.map((u, idx) => (
+                        <tr key={u._id}>
+                          <td className="users-col-index">{(userPage - 1) * 5 + idx + 1}</td>
+                          <td>
+                            <div className="admin-cell-user">
+                              <span className="user-avatar-chip">
+                                {(u.name || 'U').split(' ').map((part) => part[0]).join('').toUpperCase().slice(0, 2)}
+                              </span>
+                              <div className="user-name-stack">
+                                <span className="user-primary-name">{u.name}</span>
+                                <span className="user-secondary-id">ID: {String(u._id).slice(-6)}</span>
+                              </div>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="admin-cell-email">
+                              <Mail size={16} />
+                              <span className="user-email-text">{u.email}</span>
+                            </div>
+                          </td>
+
+                          <td className="users-col-actions">
+                            <div className="action-cell">
+                              <button className="btn-icon-action btn-edit" title="Edit Profile" onClick={() => setEditUser(u)}>
+                                <Pencil size={18} />
+                              </button>
+                              <button 
+                                className="btn-icon-action btn-delete" 
+                                title="Delete Account" 
+                                onClick={() => setConfirmDelete({ type: 'user', id: u._id, name: u.name })}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={userPage}
+                  totalItems={users.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setUserPage}
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'restaurants' && (
+            <div className="table-section">
+              <div className="table-header-row">
+                <div className="table-title-stack">
+                  <h2>Restaurant Partners <span className="entity-count">{restaurants.length}</span></h2>
+                  <p className="table-subtitle">{restaurantTableSubtitle}</p>
+                </div>
+              </div>
+              <div className="premium-table-card">
+                <div className="table-responsive">
+                  <table className="admin-table full-table restaurant-table">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Brand Info</th>
+                        <th>Communications</th>
+                        <th>Logistics</th>
+                        <th>Schedule</th>
+                        <th>Status Toggles</th>
+                        <th>Management</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedRestaurants.length === 0 && (
+                        <tr><td colSpan="7" className="empty-row">No restaurant partners found</td></tr>
+                      )}
+                      {paginatedRestaurants.map((r, idx) => (
+                        <tr key={r._id}>
+                          <td>{(restaurantPage - 1) * ITEMS_PER_PAGE + idx + 1}</td>
+                          <td>
+                            <div className="res-info-cell">
+                              <div className="res-main-info">
+                                <Coffee size={16} />
+                                <strong>{r.restaurantName || '-'}</strong>
+                              </div>
+                              <span className="res-owner-name">Owner: {r.name}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="res-contact-cell">
+                              <span className="res-contact-item"><Mail size={14} />{r.email}</span>
+                              <span className="res-contact-item"><Phone size={14} />{r.phone || '-'}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="res-details-cell">
+                              <span className="res-detail-item"><MapPin size={14} />{r.location || '-'}</span>
+                              <span className="res-detail-item">Cuisine: {r.cuisineType || '-'}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="hours-badge">
+                              <Clock size={12} />
+                              {r.openingTime && r.closingTime ? `${r.openingTime} - ${r.closingTime}` : '-'}
+                            </div>
+                          </td>
+                          <td>
+                            <div className="premium-toggle-group">
+                              <button
+                                className={`premium-toggle-btn featured ${r.isFeaturedHome ? 'on' : 'off'}`}
+                                onClick={() => handleToggleRestaurantFeatured(r._id, !r.isFeaturedHome)}
+                                title={r.isFeaturedHome ? 'Remove from Homepage' : 'Feature on Homepage'}
+                              >
+                                <Star size={14} fill={r.isFeaturedHome ? "currentColor" : "none"} />
+                                <span>{r.isFeaturedHome ? 'Featured' : 'Regular'}</span>
+                              </button>
+                              <button
+                                className={`premium-toggle-btn active ${r.isActive !== false ? 'on' : 'off'}`}
+                                onClick={() => handleToggleRestaurantStatus(r._id, r.isActive === false)}
+                                title={r.isActive !== false ? 'Deactivate Restaurant' : 'Activate Restaurant'}
+                              >
+                                <Power size={14} />
+                                <span>{r.isActive !== false ? 'Active' : 'Offline'}</span>
+                              </button>
+                            </div>
+                          </td>
+                          <td>
+                            <div className="action-cell">
+                              <button className="btn-icon-action btn-edit" title="Edit Profile" onClick={() => setEditRestaurant(r)}>
+                                <Pencil size={18} />
+                              </button>
+                              <button 
+                                className="btn-icon-action btn-delete" 
+                                title="Remove Partner" 
+                                onClick={() => setConfirmDelete({ 
+                                  type: 'restaurant', 
+                                  id: r._id, 
+                                  name: r.restaurantName || r.name 
+                                })}
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Pagination
+                  currentPage={restaurantPage}
+                  totalItems={restaurants.length}
+                  itemsPerPage={ITEMS_PER_PAGE}
+                  onPageChange={setRestaurantPage}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {toast && <div className="admin-toast">{toast}</div>}
 
-      {/* Edit Modals */}
       {editUser && (
         <EditUserModal
           user={editUser}
           onClose={() => setEditUser(null)}
-          onSaved={() => { setEditUser(null); fetchAll(); showToast('User updated successfully'); }}
+          onSaved={() => { setEditUser(null); fetchAll(); showToast('Intelligence updated: User sync complete'); }}
         />
       )}
       {editRestaurant && (
         <EditRestaurantModal
           restaurant={editRestaurant}
           onClose={() => setEditRestaurant(null)}
-          onSaved={() => { setEditRestaurant(null); fetchAll(); showToast('Restaurant updated successfully'); }}
+          onSaved={() => { setEditRestaurant(null); fetchAll(); showToast('Intelligence updated: Restaurant sync complete'); }}
         />
       )}
 
-      {/* Confirm Delete Dialog */}
-      {confirmDelete && (
-        <div className="modal-overlay" onClick={() => setConfirmDelete(null)}>
-          <div className="modal-box confirm-box" onClick={(e) => e.stopPropagation()}>
-            <h3>Confirm Delete</h3>
-            <p>Are you sure you want to delete <strong>{confirmDelete.name}</strong>? This cannot be undone.</p>
-            <div className="modal-footer">
-              <button className="btn-cancel" onClick={() => setConfirmDelete(null)}>Cancel</button>
-              <button className="btn-delete-confirm" onClick={handleDeleteConfirmed}>Yes, Delete</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      <ConfirmModal
+        isOpen={!!confirmDelete}
+        title="Terminal Account Deletion"
+        message={`Warning: You are about to permanently purge "${confirmDelete?.name}" from the system. This action is terminal and cannot be reversed.`}
+        onConfirm={handleDeleteConfirmed}
+        onCancel={() => setConfirmDelete(null)}
+        confirmText="Confirm Purge"
+      />
+    </AdminLayout>
   );
 }
 

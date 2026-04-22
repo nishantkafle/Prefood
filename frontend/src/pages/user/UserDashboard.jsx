@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import { ArrowLeft, Search, MapPin, Clock3, Clock, ChefHat, UtensilsCrossed, Trash2, ShoppingBag, Plus, Minus, Info, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Search, MapPin, Clock3, Clock, ChefHat, UtensilsCrossed, Trash2, ShoppingBag, Plus, Minus, Info, MessageSquare, Phone, ChevronDown } from 'lucide-react';
 import { createAppSocket } from '../../config/socket';
 import NotificationBell from '../../components/shared/NotificationBell';
 import UserNavbar from '../../components/shared/UserNavbar';
@@ -20,6 +20,43 @@ const getMaxScheduleLocalDateTimeValue = () => {
   return new Date(max.getTime() - timezoneOffset).toISOString().slice(0, 16);
 };
 
+const parseClockToMinutes = (timeString = '') => {
+  if (typeof timeString !== 'string') return null;
+  const match = timeString.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+
+  if (!Number.isInteger(hours) || !Number.isInteger(minutes)) return null;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+
+  return (hours * 60) + minutes;
+};
+
+const isRestaurantOpenNow = (restaurant, now = new Date()) => {
+  const openingMinutes = parseClockToMinutes(restaurant?.openingTime);
+  const closingMinutes = parseClockToMinutes(restaurant?.closingTime);
+
+  if (openingMinutes === null || closingMinutes === null) return true;
+
+  const nowMinutes = (now.getHours() * 60) + now.getMinutes();
+
+  if (openingMinutes === closingMinutes) return true;
+
+  if (openingMinutes < closingMinutes) {
+    return nowMinutes >= openingMinutes && nowMinutes < closingMinutes;
+  }
+
+  return nowMinutes >= openingMinutes || nowMinutes < closingMinutes;
+};
+
+const buildClosedMessage = (restaurant) => {
+  const opening = restaurant?.openingTime || 'not set';
+  const closing = restaurant?.closingTime || 'not set';
+  return `Restaurant is currently closed. Opening time: ${opening}. Closing time: ${closing}.`;
+};
+
 function UserDashboard() {
   const navigate = useNavigate();
   const socketRef = React.useRef(null);
@@ -31,9 +68,9 @@ function UserDashboard() {
   const [menuLoading, setMenuLoading] = useState(false);
   const [activeFilters, setActiveFilters] = useState(['all']);
   const [cart, setCart] = useState([]);
-  const [viewMode, setViewMode] = useState('grid');
   const [orderSuccess, setOrderSuccess] = useState(false);
-  const [dineInAt, setDineInAt] = useState(getCurrentLocalDateTimeValue());
+  const [dineInAt, setDineInAt] = useState('');
+  const [showSchedule, setShowSchedule] = useState(false);
   const [orderError, setOrderError] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('esewa');
   const [menuSearchQuery, setMenuSearchQuery] = useState('');
@@ -42,6 +79,7 @@ function UserDashboard() {
   const [locating, setLocating] = useState(false);
   const [profile, setProfile] = useState(null);
   const [showMobileCart, setShowMobileCart] = useState(false);
+  const [placingOrder, setPlacingOrder] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -142,7 +180,8 @@ function UserDashboard() {
     setSelectedRestaurant(restaurant);
     setMenuLoading(true);
     setCart([]);
-    setDineInAt(getCurrentLocalDateTimeValue());
+    setDineInAt('');
+    setShowSchedule(false);
     setOrderError('');
     setPaymentMethod('esewa');
     setActiveFilters(['all']);
@@ -163,9 +202,9 @@ function UserDashboard() {
     setSelectedRestaurant(null);
     setMenuItems([]);
     setCart([]);
-    setDineInAt(getCurrentLocalDateTimeValue());
+    setDineInAt('');
+    setShowSchedule(false);
     setOrderError('');
-    setPaymentMethod('esewa');
     setActiveFilters(['all']);
     setMenuSearchQuery('');
     setOrderSuccess(false);
@@ -206,6 +245,13 @@ function UserDashboard() {
 
   // Cart logic
   const addToCart = (item) => {
+    if (!selectedRestaurant || !isRestaurantOpenNow(selectedRestaurant)) {
+      const closedMessage = selectedRestaurant ? buildClosedMessage(selectedRestaurant) : 'Restaurant is currently closed.';
+      setOrderError(closedMessage);
+      alert(closedMessage);
+      return;
+    }
+
     setCart(prev => {
       const existing = prev.find(c => c._id === item._id);
       if (existing) {
@@ -216,6 +262,13 @@ function UserDashboard() {
   };
 
   const updateCartQty = (itemId, delta) => {
+    if (delta > 0 && (!selectedRestaurant || !isRestaurantOpenNow(selectedRestaurant))) {
+      const closedMessage = selectedRestaurant ? buildClosedMessage(selectedRestaurant) : 'Restaurant is currently closed.';
+      setOrderError(closedMessage);
+      alert(closedMessage);
+      return;
+    }
+
     setCart(prev => {
       return prev.map(c => {
         if (c._id === itemId) {
@@ -295,30 +348,33 @@ function UserDashboard() {
   };
 
   const handlePlacePreOrder = async () => {
-    if (cart.length === 0 || !selectedRestaurant?._id) return;
+    if (placingOrder || cart.length === 0 || !selectedRestaurant?._id) return;
 
-    if (!dineInAt) {
-      setOrderError('Please select your dine-in arrival time before placing order.');
+    if (!isRestaurantOpenNow(selectedRestaurant)) {
+      setOrderError(buildClosedMessage(selectedRestaurant));
       return;
     }
 
-    if (new Date(dineInAt).getTime() < Date.now()) {
-      setOrderError('Dine-in arrival time cannot be in the past.');
-      return;
-    }
+    if (dineInAt) {
+      if (new Date(dineInAt).getTime() < Date.now()) {
+        setOrderError('Dine-in arrival time cannot be in the past.');
+        return;
+      }
 
-    if (new Date(dineInAt).getTime() > Date.now() + 7 * 24 * 60 * 60 * 1000) {
-      setOrderError('Dine-in arrival time can only be scheduled up to 7 days ahead.');
-      return;
+      if (new Date(dineInAt).getTime() > Date.now() + 7 * 24 * 60 * 60 * 1000) {
+        setOrderError('Dine-in arrival time can only be scheduled up to 7 days ahead.');
+        return;
+      }
     }
 
     setOrderError('');
+    setPlacingOrder(true);
 
     try {
       if (paymentMethod === 'esewa') {
         const response = await axios.post('/api/esewa/initiate', {
           restaurantId: selectedRestaurant._id,
-          dineInAt,
+          dineInAt: dineInAt || null,
           items: cart.map(i => ({ menuItem: i._id, quantity: i.quantity }))
         }, { withCredentials: true });
 
@@ -331,14 +387,15 @@ function UserDashboard() {
       } else {
         const response = await axios.post('/api/orders/preorder', {
           restaurantId: selectedRestaurant._id,
-          dineInAt,
+          dineInAt: dineInAt || null,
           items: cart.map(i => ({ menuItem: i._id, quantity: i.quantity }))
         }, { withCredentials: true });
 
         if (response.data?.success) {
           setOrderSuccess(true);
           setCart([]);
-          setDineInAt(getCurrentLocalDateTimeValue());
+          setDineInAt('');
+          setShowSchedule(false);
           setTimeout(() => setOrderSuccess(false), 3000);
           return;
         }
@@ -347,6 +404,8 @@ function UserDashboard() {
       }
     } catch (err) {
       setOrderError(err.response?.data?.message || 'Failed to place preorder');
+    } finally {
+      setPlacingOrder(false);
     }
   };
 
@@ -371,6 +430,8 @@ function UserDashboard() {
 
   const filteredMenu = getFilteredMenu();
   const categoryDot = { 'veg': '#4caf50', 'non-veg': '#f44336', 'vegan': '#8bc34a' };
+  const selectedRestaurantIsOpen = selectedRestaurant ? isRestaurantOpenNow(selectedRestaurant) : true;
+  const selectedRestaurantClosedMessage = selectedRestaurant ? buildClosedMessage(selectedRestaurant) : 'Restaurant is currently closed.';
 
   useEffect(() => {
     if (!selectedRestaurant?._id) return undefined;
@@ -418,39 +479,79 @@ function UserDashboard() {
     return (
       <div className="um-page">
         <UserNavbar />
-        <div className="um-hero">
-          <div className="um-top-nav">
-            <button className="um-back-btn" onClick={handleBackToList}>
-              <ArrowLeft size={18} />
-              <span>Back</span>
-            </button>
-            <button 
-              className="um-chat-btn"
-              onClick={handleChatWithRestaurant}
-            >
-              <MessageSquare size={18} />
-              <span className="desktop-only">Message Restaurant</span>
-            </button>
-          </div>
-          <div className="um-hero-content">
-            <div className="um-hero-badge">Restaurant</div>
-            <h1>{selectedRestaurant.restaurantName || 'Restaurant'}</h1>
-            <div className="um-hero-meta">
-              {selectedRestaurant.location && (
-                <span className="um-meta-pill">
-                  <MapPin size={16} /> {selectedRestaurant.location}
-                </span>
-              )}
-              {selectedRestaurant.cuisineType && (
-                <span className="um-meta-pill">
-                  <UtensilsCrossed size={16} /> {selectedRestaurant.cuisineType}
-                </span>
-              )}
-              {selectedRestaurant.openingTime && selectedRestaurant.closingTime && (
-                <span className="um-meta-pill">
-                  <Clock3 size={16} /> {selectedRestaurant.openingTime} - {selectedRestaurant.closingTime}
-                </span>
-              )}
+        <div className="um-hero-section">
+          <div className="um-container">
+            <div className="um-navigation">
+              <button className="um-back-btn" onClick={handleBackToList}>
+                <ArrowLeft size={18} />
+                <span>Restaurants</span>
+              </button>
+            </div>
+            
+            <div className="um-hero-main">
+              <div className="um-hero-header-row">
+                <div className="um-hero-title-group">
+                  <h1>{selectedRestaurant.restaurantName || 'Restaurant'}</h1>
+                </div>
+                <div className="um-hero-actions-right">
+                  <button 
+                    className="um-chat-btn-premium"
+                    onClick={handleChatWithRestaurant}
+                  >
+                    <MessageSquare size={16} />
+                    <span>Chat</span>
+                  </button>
+                  {selectedRestaurant.logo && (
+                    <img src={selectedRestaurant.logo} alt="Logo" className="um-hero-logo" />
+                  )}
+                </div>
+              </div>
+              
+              <div className="um-hero-info-grid">
+                {selectedRestaurant.location && (
+                  <div className="um-info-item">
+                    <MapPin size={18} />
+                    <div>
+                      <h6>Location</h6>
+                      <p>{selectedRestaurant.location}</p>
+                    </div>
+                  </div>
+                )}
+                {selectedRestaurant.openingTime && selectedRestaurant.closingTime && (
+                  <div className="um-info-item">
+                    <Clock3 size={18} />
+                    <div>
+                      <h6>Operating Hours</h6>
+                      <p>{selectedRestaurant.openingTime} - {selectedRestaurant.closingTime}</p>
+                    </div>
+                  </div>
+                )}
+                {selectedRestaurant.phone && (
+                  <div className="um-info-item">
+                    <Phone size={18} />
+                    <div>
+                      <h6>Contact</h6>
+                      <p>{selectedRestaurant.phone}</p>
+                    </div>
+                  </div>
+                )}
+                <div className="um-info-item">
+                  <Info size={18} />
+                  <div>
+                    <h6>Status</h6>
+                    <p>{selectedRestaurantIsOpen ? 'Open now' : 'Closed now'}</p>
+                  </div>
+                </div>
+                {selectedRestaurant.cuisineType && (
+                  <div className="um-info-item">
+                    <ChefHat size={18} />
+                    <div>
+                      <h6>Cuisine</h6>
+                      <p>{selectedRestaurant.cuisineType}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -495,10 +596,6 @@ function UserDashboard() {
                     onChange={(e) => setMenuSearchQuery(e.target.value)}
                   />
                 </div>
-                <div className="um-view-toggle desktop-only">
-                  <button className={viewMode === 'grid' ? 'active' : ''} onClick={() => setViewMode('grid')}>Grid</button>
-                  <button className={viewMode === 'list' ? 'active' : ''} onClick={() => setViewMode('list')}>List</button>
-                </div>
               </div>
             </div>
 
@@ -513,7 +610,7 @@ function UserDashboard() {
                 <h3>No dishes found</h3>
               </div>
             ) : (
-              <div className={`um-menu-grid ${viewMode === 'list' ? 'um-menu-list-view' : ''}`}>
+              <div className="um-menu-grid">
                 {filteredMenu.map(item => {
                   const qtyInCart = getItemQtyInCart(item._id);
                   const isOutOfStock = item.isActive === false;
@@ -547,6 +644,8 @@ function UserDashboard() {
                           
                           {isOutOfStock ? (
                             <span className="um-stock-badge out">Unavailable</span>
+                          ) : !selectedRestaurantIsOpen ? (
+                            <span className="um-stock-badge out">Closed</span>
                           ) : qtyInCart === 0 ? (
                             <button className="um-add-to-cart-btn" onClick={() => addToCart(item)}>
                               <Plus size={16} /> Add
@@ -584,6 +683,8 @@ function UserDashboard() {
             </div>
 
             <div className="um-cart-body">
+
+
               {orderSuccess && (
                 <div className="um-status-alert success">
                   <Info size={16} />
@@ -594,6 +695,12 @@ function UserDashboard() {
                 <div className="um-status-alert error">
                   <Info size={16} />
                   <span>{orderError}</span>
+                </div>
+              )}
+              {!selectedRestaurantIsOpen && (
+                <div className="um-status-alert error">
+                  <Info size={16} />
+                  <span>{selectedRestaurantClosedMessage}</span>
                 </div>
               )}
 
@@ -633,6 +740,32 @@ function UserDashboard() {
 
             <div className="um-cart-footer">
               <div className="um-cart-summary">
+                <div className="um-summary-row schedule-optional">
+                  <button 
+                    className={`um-schedule-toggle ${showSchedule ? 'open' : ''}`}
+                    onClick={() => {
+                      const newState = !showSchedule;
+                      setShowSchedule(newState);
+                      if (!newState) setDineInAt('');
+                    }}
+                    type="button"
+                  >
+                    <label><Clock size={14} /> Schedule Arrival</label>
+                    <ChevronDown size={14} />
+                  </button>
+                  
+                  {showSchedule && (
+                    <div className="um-schedule-input-wrapper">
+                      <input
+                        type="datetime-local"
+                        value={dineInAt}
+                        min={getCurrentLocalDateTimeValue()}
+                        max={getMaxScheduleLocalDateTimeValue()}
+                        onChange={(e) => setDineInAt(e.target.value)}
+                      />
+                    </div>
+                  )}
+                </div>
                 <div className="um-summary-row total">
                   <span>Total Amount</span>
                   <span>NPR {getCartTotal()}</span>
@@ -640,41 +773,37 @@ function UserDashboard() {
               </div>
 
               <div className="um-checkout-form">
-                <div className="um-field">
-                  <label><Clock size={14} /> Arrival Time</label>
-                  <input
-                    type="datetime-local"
-                    value={dineInAt}
-                    min={getCurrentLocalDateTimeValue()}
-                    max={getMaxScheduleLocalDateTimeValue()}
-                    onChange={(e) => setDineInAt(e.target.value)}
-                  />
-                </div>
-                
-                <div className="um-field">
-                  <label>Payment</label>
+                <div className="um-field" style={{ marginTop: '0' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px', display: 'block' }}>Payment Method</label>
                   <div className="um-payment-grid">
                     <div 
-                      className={`um-payment-card ${paymentMethod === 'esewa' ? 'active' : ''}`}
+                      className={`um-payment-card esewa-mini ${paymentMethod === 'esewa' ? 'active' : ''}`}
                       onClick={() => setPaymentMethod('esewa')}
                     >
-                      <span>eSewa</span>
+                      <span className="um-payment-label">eSewa</span>
                     </div>
                     <div 
-                      className={`um-payment-card ${paymentMethod === 'cash' ? 'active' : ''}`}
+                      className={`um-payment-card cash-mini ${paymentMethod === 'cash' ? 'active' : ''}`}
                       onClick={() => setPaymentMethod('cash')}
                     >
+                      <UtensilsCrossed size={16} />
                       <span>Cash</span>
                     </div>
                   </div>
                 </div>
 
                 <button 
-                  className="um-place-order-btn" 
+                  className={`um-place-order-btn ${paymentMethod === 'esewa' ? 'esewa-btn' : 'cash-btn'}`} 
                   onClick={handlePlacePreOrder} 
-                  disabled={cart.length === 0}
+                  disabled={cart.length === 0 || placingOrder || !selectedRestaurantIsOpen}
                 >
-                  {paymentMethod === 'esewa' ? 'Pay & Order' : 'Place Order'}
+                  {placingOrder
+                    ? 'Placing Order...'
+                    : !selectedRestaurantIsOpen
+                      ? 'Restaurant Closed'
+                    : paymentMethod === 'esewa'
+                      ? 'Pay & Order via eSewa'
+                      : 'Place Order (Cash)'}
                 </button>
               </div>
             </div>
@@ -814,6 +943,9 @@ function UserDashboard() {
                     
                     <div className="ud-card-footer">
                       <div className="ud-card-btn">Order Now</div>
+                      {!isRestaurantOpenNow(restaurant) && (
+                        <div className="ud-distance-tag">Closed now</div>
+                      )}
                       {restaurant.distance !== undefined && restaurant.distance !== null && (
                         <div className="ud-distance-tag">
                           {restaurant.distance < 1 

@@ -59,6 +59,14 @@ export const initSocket = (server) => {
       if (userId) socket.leave(`user_${userId}`);
     });
 
+    socket.on('joinAdmin', () => {
+      socket.join('admin_room');
+    });
+
+    socket.on('leaveAdmin', () => {
+      socket.leave('admin_room');
+    });
+
     socket.on('joinRestaurantOrders', (restaurantId) => {
       if (restaurantId) socket.join(`restaurant_orders_${restaurantId}`);
     });

@@ -5,46 +5,173 @@
   background-color: var(--bg-sub);
 }
 
-/* Hero Section */
-.ud-hero, .um-hero {
-  background: var(--bg-main) !important;
-  border-bottom: 1px solid var(--border-light) !important;
-  padding: 40px 60px !important;
+/* Hero Section - Redesigned */
+.um-hero-section {
+  background: var(--bg-main);
+  border-bottom: 1px solid var(--border-light);
+  padding: 1rem 0;
   position: relative;
   overflow: hidden;
 }
 
-@media (max-width: 768px) {
-  .ud-hero, .um-hero {
-    padding: 30px 20px !important;
-  }
-}
-
-.ud-hero-content h1, .um-hero-content h1 {
-  font-size: 2.5rem !important;
-  font-weight: 800 !important;
-  color: var(--text-main) !important;
-  margin: 12px 0 16px 0 !important;
-  line-height: 1.2 !important;
+.um-container {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 40px;
 }
 
 @media (max-width: 768px) {
-  .ud-hero-content h1, .um-hero-content h1 {
-    font-size: 1.8rem !important;
-  }
+  .um-container { padding: 0 20px; }
 }
 
-.ud-hero-badge, .um-hero-badge {
-  display: inline-block;
-  padding: 6px 12px;
+.um-navigation {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem; /* Increased spacing to prevent overlap */
+}
+
+.um-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: 1px solid var(--border-light);
+  padding: 4px 10px;
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.um-back-btn:hover {
   background: var(--brand-light);
+  border-color: var(--brand);
+  color: var(--brand);
+}
+
+.um-chat-btn-premium {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--brand);
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
+  transition: all 0.2s;
+}
+
+.um-chat-btn-premium:hover {
+  background: var(--brand-deep);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(234, 88, 12, 0.3);
+}
+
+.um-hero-main {
+  display: flex;
+  flex-direction: column;
+}
+
+.um-hero-badge {
+  display: inline-block;
+  width: fit-content;
+  padding: 2px 10px;
+  background: var(--brand-soft);
   color: var(--brand);
   border-radius: 99px;
-  font-size: 12px;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
-  border: 1px solid rgba(234, 88, 12, 0.1);
+  letter-spacing: 0.5px;
+  margin-bottom: 0.75rem;
+}
+
+.um-hero-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  gap: 1rem;
+}
+
+.um-hero-header-row h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.um-hero-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.um-hero-logo {
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  object-fit: cover;
+  border: 2px solid var(--bg-sub);
+  box-shadow: var(--shadow-sm);
+}
+
+.um-hero-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  background: var(--bg-sub);
+  padding: 0.75rem 1rem;
+  border-radius: 14px;
+  border: 1px solid var(--border-light);
+}
+
+.um-info-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.um-info-item svg {
+  color: var(--brand);
+  background: var(--brand-soft);
+  padding: 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.um-info-item h6 {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.um-info-item p {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin: 0;
+}
+
+@media (max-width: 1024px) {
+  .um-hero-header-row h1 { font-size: 2.2rem; }
+  .um-hero-logo { width: 60px; height: 60px; }
+}
+
+@media (max-width: 768px) {
+  .um-hero-header-row { flex-direction: column; align-items: flex-start; gap: 1rem; }
+  .um-hero-info-grid { grid-template-columns: 1fr; }
 }
 
 /* Restaurant Grid */
@@ -90,6 +217,37 @@
   .um-body {
     flex-direction: column;
     padding: 20px;
+  }
+
+  .um-menu-topbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .um-menu-actions,
+  .um-menu-search {
+    width: 100%;
+  }
+
+  .um-cart-close.mobile-only {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    background: var(--bg-main);
+    color: var(--text-main);
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .mobile-cart-toggle.mobile-only {
+    display: flex !important;
   }
 }
 
@@ -157,6 +315,14 @@
   .um-cart-panel.mobile-active {
     transform: translateY(0);
   }
+
+  .um-cart-body {
+    padding: 14px;
+  }
+
+  .um-cart-footer {
+    padding: 16px;
+  }
 }
 
 /* Food Cards */
@@ -214,6 +380,153 @@
   border: none;
   cursor: pointer;
   transition: all 0.3s ease;
+}
+
+@media (max-width: 1024px) {
+  .mobile-cart-toggle {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    bottom: 74px;
+    border-radius: 14px;
+    padding: 12px 14px;
+    z-index: 2050;
+  }
+}
+
+@media (max-width: 768px) {
+  .um-container {
+    padding: 0 14px;
+  }
+
+  .um-body {
+    padding: 14px;
+    gap: 14px;
+  }
+
+  .um-navigation {
+    margin-bottom: 1rem;
+  }
+
+  .um-hero-header-row h1 {
+    font-size: 1.35rem;
+    line-height: 1.2;
+  }
+
+  .um-hero-actions-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .um-chat-btn-premium {
+    padding: 7px 12px;
+    font-size: 0.82rem;
+  }
+
+  .um-hero-logo {
+    width: 42px;
+    height: 42px;
+  }
+
+  .um-info-item {
+    gap: 10px;
+  }
+
+  .um-info-item p {
+    font-size: 0.88rem;
+    word-break: break-word;
+  }
+
+  .um-menu-info-text h2 {
+    font-size: 1.2rem;
+  }
+
+  .um-menu-grid {
+    gap: 14px;
+  }
+
+  .um-food-info {
+    padding: 16px;
+  }
+
+  .um-food-name-row h3 {
+    font-size: 1rem;
+  }
+
+  .um-food-bottom {
+    gap: 10px;
+    align-items: center;
+  }
+
+  .um-cart-panel {
+    height: 86vh;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .um-cart-header {
+    padding: 16px 14px 12px;
+  }
+
+  .um-cart-header-title h3 {
+    font-size: 1rem;
+  }
+
+  .um-cart-item-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .um-cart-item-total {
+    font-size: 0.95rem;
+  }
+
+  .um-payment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .um-place-order-btn {
+    font-size: 0.95rem;
+    padding: 12px !important;
+  }
+
+  .mobile-cart-toggle {
+    bottom: 68px;
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .um-filter-item {
+    padding: 8px 12px !important;
+  }
+
+  .um-filter-label {
+    font-size: 0.82rem;
+  }
+
+  .um-add-to-cart-btn {
+    padding: 8px 12px;
+    font-size: 0.78rem;
+    gap: 4px;
+  }
+
+  .um-qty-bubble button {
+    width: 28px;
+    height: 28px;
+  }
+
+  .um-qty-bubble span {
+    width: 24px;
+    font-size: 0.82rem;
+  }
+
+  .mobile-cart-toggle {
+    left: 10px;
+    right: 10px;
+    bottom: 64px;
+    padding: 10px 12px;
+    font-size: 0.82rem;
+  }
 }
 
 .mobile-cart-toggle:active {
@@ -354,3 +667,187 @@
   border-color: var(--brand);
   box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
 }
+
+/* eSewa Specific Styling */
+.um-payment-card.esewa.active {
+  background: #60bb46 !important; /* eSewa Green */
+  color: white !important;
+  border-color: #60bb46 !important;
+  box-shadow: 0 4px 12px rgba(96, 187, 70, 0.3) !important;
+}
+
+.um-payment-card.esewa.active span {
+  color: white !important;
+}
+
+/* Optional Schedule Row in Summary */
+.um-summary-row.schedule-optional {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border-light);
+  margin-bottom: 0.5rem;
+}
+
+.um-schedule-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 4px 0;
+  cursor: pointer;
+  color: var(--text-main);
+  transition: all 0.2s;
+}
+
+.um-schedule-toggle label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  text-transform: uppercase;
+  cursor: pointer;
+  margin: 0;
+}
+
+.um-schedule-toggle svg {
+  color: var(--text-muted);
+  transition: transform 0.3s ease;
+}
+
+.um-schedule-toggle.open svg {
+  transform: rotate(180deg);
+}
+
+.um-schedule-input-wrapper {
+  width: 100%;
+  margin-top: 10px;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.um-schedule-input-wrapper input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: 8px;
+  font-size: 0.9rem;
+  background: var(--bg-sub);
+  color: var(--text-main);
+}
+
+/* Multi-Payment Options UI */
+.um-payment-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.um-payment-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid var(--border-light);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--bg-main);
+}
+
+.um-payment-card:hover {
+  border-color: var(--brand-light);
+  background: var(--brand-soft);
+}
+
+.um-payment-card.active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+}
+
+.um-payment-card.esewa-mini img {
+  height: 20px;
+  width: auto;
+  object-fit: contain;
+}
+
+.um-payment-card.esewa-mini.active {
+  border-color: #60bb46;
+  background: rgba(96, 187, 70, 0.05);
+}
+
+.um-payment-card.cash-mini {
+  color: var(--text-muted);
+}
+
+.um-payment-card.cash-mini.active {
+  border-color: var(--brand);
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+
+.um-payment-card span {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Specific Checkout Buttons */
+.esewa-btn {
+  background: #60bb46 !important;
+  color: white !important;
+  border: none !important;
+  width: 100%;
+  padding: 14px !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.esewa-btn:hover {
+  background: #4a9e35 !important;
+  box-shadow: 0 6px 20px rgba(96, 187, 70, 0.4) !important;
+  transform: translateY(-1px);
+}
+
+.cash-btn {
+  background: var(--brand) !important;
+  color: white !important;
+  border: none !important;
+  width: 100%;
+  padding: 14px !important;
+  border-radius: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.cash-btn:hover {
+  background: var(--brand-deep) !important;
+  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.3) !important;
+  transform: translateY(-1px);
+}
+
+
+

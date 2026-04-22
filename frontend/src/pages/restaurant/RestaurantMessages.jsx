@@ -19,6 +19,7 @@ function RestaurantMessages() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [mobileConversationOpen, setMobileConversationOpen] = useState(false);
 
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -139,6 +140,7 @@ function RestaurantMessages() {
 
   const handleSelectUser = async (conversation) => {
     setSelectedUser(conversation.otherUser);
+    setMobileConversationOpen(true);
     await loadMessages(conversation.otherUser._id);
   };
 
@@ -278,7 +280,7 @@ function RestaurantMessages() {
             </div>
           </div>
 
-          <div className="chat-page-wrap">
+          <div className={`chat-page-wrap ${mobileConversationOpen ? 'mobile-detail-active' : ''}`}>
             <div className="chat-sidebar">
               <div className="chat-sidebar-title">Users</div>
                   {conversations.length === 0 ? (
@@ -306,8 +308,18 @@ function RestaurantMessages() {
               ) : (
                 <>
                   <div className="chat-main-header">
-                    <div>{selectedUser?.name || 'User'}</div>
-                    <div className="chat-header-phone">{selectedUser?.phone ? `Phone: ${selectedUser.phone}` : 'Phone: Not provided'}</div>
+                    <button
+                      type="button"
+                      className="chat-back-btn"
+                      onClick={() => setMobileConversationOpen(false)}
+                      aria-label="Back to users"
+                    >
+                      ←
+                    </button>
+                    <div>
+                      <div>{selectedUser?.name || 'User'}</div>
+                      <div className="chat-header-phone">{selectedUser?.phone ? `Phone: ${selectedUser.phone}` : 'Phone: Not provided'}</div>
+                    </div>
                   </div>
                   {error && <div className="chat-error-banner">{error}</div>}
                   <div className="chat-messages">

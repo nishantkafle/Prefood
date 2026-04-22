@@ -250,3 +250,75 @@
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow-sm);
 }
+
+@media (max-width: 900px) {
+  .settings-container {
+    max-width: 100%;
+    padding: 10px 0 20px;
+  }
+
+  .settings-card {
+    padding: 24px;
+    border-radius: 16px;
+  }
+
+  .settings-header {
+    margin-bottom: 18px;
+  }
+
+  .settings-header h1 {
+    font-size: 1.6rem;
+  }
+
+  .settings-header p {
+    font-size: 0.95rem;
+  }
+
+  .profile-photo-section {
+    gap: 16px;
+    margin-bottom: 26px;
+    padding-bottom: 20px;
+  }
+
+  .photo-display,
+  .profile-large-img,
+  .profile-placeholder-large {
+    width: 90px;
+    height: 90px;
+    border-radius: 20px;
+  }
+
+  .settings-grid {
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .us-map-wrapper {
+    height: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-card {
+    padding: 16px;
+    border-radius: 14px;
+  }
+
+  .settings-header h1 {
+    font-size: 1.35rem;
+  }
+
+  .settings-field input {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+
+  .photo-upload-label {
+    width: 34px;
+    height: 34px;
+  }
+
+  .us-map-wrapper {
+    height: 240px;
+  }
+}

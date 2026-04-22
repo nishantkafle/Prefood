@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useInRouterContext } from 'react-router-dom';
 import axios from 'axios';
+import { createAppSocket } from './config/socket';
 import PublicHome from './pages/public/PublicHome';
 import UserDashboard from './pages/user/UserDashboard';
 import UserChats from './pages/user/UserChats';
@@ -18,6 +19,7 @@ import PWAInstallButton from './pwa/PWAInstallButton';
 const AUTH_CACHE_TTL_MS = 30000;
 
 const authProfileCache = {
+  profile: null,
   role: null,
   checkedAt: 0,
   token: '',
@@ -32,20 +34,51 @@ function getAuthTokenSnapshot() {
   }
 }
 
-function getFreshCachedRole() {
-  const token = getAuthTokenSnapshot();
-  const isFresh = (Date.now() - authProfileCache.checkedAt) < AUTH_CACHE_TTL_MS;
-  if (!isFresh || authProfileCache.token !== token) {
-    return undefined;
+function getAuthRoleHint() {
+  try {
+    return localStorage.getItem('authRole') || null;
+  } catch (error) {
+    return null;
   }
-  return authProfileCache.role;
 }
 
-async function getProfileRoleCached() {
+function clearAuthCache() {
+  authProfileCache.profile = null;
+  authProfileCache.role = null;
+  authProfileCache.token = '';
+  authProfileCache.checkedAt = Date.now();
+  authProfileCache.inFlight = null;
+  try {
+    localStorage.removeItem('authRole');
+  } catch (error) {
+  }
+}
+
+function getFreshCachedProfile() {
   const token = getAuthTokenSnapshot();
-  const cachedRole = getFreshCachedRole();
-  if (cachedRole !== undefined) {
-    return cachedRole;
+  if (!token) {
+    clearAuthCache();
+    return null;
+  }
+
+  const isFresh = (Date.now() - authProfileCache.checkedAt) < AUTH_CACHE_TTL_MS;
+  if (!isFresh || authProfileCache.token !== token || !authProfileCache.profile) {
+    return undefined;
+  }
+
+  return authProfileCache.profile;
+}
+
+async function getProfileCached() {
+  const token = getAuthTokenSnapshot();
+  if (!token) {
+    clearAuthCache();
+    return null;
+  }
+
+  const cachedProfile = getFreshCachedProfile();
+  if (cachedProfile !== undefined) {
+    return cachedProfile;
   }
 
   if (authProfileCache.inFlight) {
@@ -54,13 +87,20 @@ async function getProfileRoleCached() {
 
   authProfileCache.inFlight = axios.get('/api/auth/profile', { withCredentials: true })
     .then((response) => {
-      const role = response.data?.success && response.data?.data?.role
-        ? response.data.data.role
+      const profile = response.data?.success && response.data?.data
+        ? response.data.data
         : null;
-      authProfileCache.role = role;
-      return role;
+      authProfileCache.profile = profile;
+      authProfileCache.role = profile?.role || null;
+      if (profile?.role) {
+        localStorage.setItem('authRole', profile.role);
+      } else {
+        localStorage.removeItem('authRole');
+      }
+      return profile;
     })
     .catch(() => {
+      authProfileCache.profile = null;
       authProfileCache.role = null;
       return null;
     })
@@ -79,21 +119,68 @@ function getDashboardRouteByRole(role) {
   return '/user/dashboard';
 }
 
+function SuspendedAccessScreen() {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/auth/logout', {}, { withCredentials: true });
+    } catch (error) {
+    } finally {
+      try {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('authRole');
+      } catch (error) {
+      }
+      navigate('/');
+    }
+  };
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: 'linear-gradient(135deg, #fff7ed 0%, #f8fafc 100%)' }}>
+      <div style={{ width: '100%', maxWidth: '560px', background: '#fff', borderRadius: '24px', padding: '40px', boxShadow: '0 30px 80px rgba(15, 23, 42, 0.12)', border: '1px solid #fee2e2', textAlign: 'center' }}>
+        <div style={{ width: '72px', height: '72px', borderRadius: '999px', margin: '0 auto 18px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fef2f2', color: '#ef4444', fontSize: '28px', fontWeight: '800' }}>!</div>
+        <h1 style={{ margin: '0 0 12px', fontSize: '28px', color: '#111827' }}>Account Suspended</h1>
+        <p style={{ margin: '0 0 8px', color: '#475569', fontSize: '16px', lineHeight: 1.6 }}>
+          Your account is suspended. Contact customer care for more information.
+        </p>
+        <p style={{ margin: '0 0 28px', color: '#64748b', fontSize: '14px' }}>
+          This restaurant account can no longer access dashboard features until it is reactivated.
+        </p>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => navigate('/')} style={{ border: 'none', background: '#f97316', color: '#fff', borderRadius: '12px', padding: '12px 20px', fontWeight: '700', cursor: 'pointer' }}>
+            Go Home
+          </button>
+          <button type="button" onClick={handleLogout} style={{ border: '1px solid #e2e8f0', background: '#fff', color: '#0f172a', borderRadius: '12px', padding: '12px 20px', fontWeight: '700', cursor: 'pointer' }}>
+            Logout
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function RoleProtectedRoute({ allowedRole, children }) {
-  const cachedRole = getFreshCachedRole();
-  const [checkingAuth, setCheckingAuth] = useState(cachedRole === undefined);
-  const [profileRole, setProfileRole] = useState(cachedRole ?? null);
+  const cachedProfile = getFreshCachedProfile();
+  const [checkingAuth, setCheckingAuth] = useState(cachedProfile === undefined);
+  const [profile, setProfile] = useState(cachedProfile ?? null);
 
   useEffect(() => {
-    if (cachedRole !== undefined) return;
+    const token = getAuthTokenSnapshot();
+    const isFresh = (Date.now() - authProfileCache.checkedAt) < AUTH_CACHE_TTL_MS && authProfileCache.token === token;
+    if (isFresh && authProfileCache.profile) {
+      setCheckingAuth(false);
+      setProfile(authProfileCache.profile);
+      return;
+    }
 
     let isMounted = true;
 
     const checkProfile = async () => {
-      const role = await getProfileRoleCached();
+      const nextProfile = await getProfileCached();
       if (!isMounted) return;
 
-      setProfileRole(role);
+      setProfile(nextProfile);
       setCheckingAuth(false);
     };
 
@@ -101,18 +188,57 @@ function RoleProtectedRoute({ allowedRole, children }) {
     return () => {
       isMounted = false;
     };
-  }, [cachedRole]);
+  }, []);
+
+  useEffect(() => {
+    if (!profile?._id || profile.role !== 'restaurant') return undefined;
+
+    const socket = createAppSocket();
+
+    socket.on('connect', () => {
+      socket.emit('joinUser', profile._id);
+    });
+
+    const handleRestaurantStatusChange = (payload) => {
+      if (!payload) return;
+      if (payload.userId && String(payload.userId) !== String(profile._id)) return;
+
+      if (payload.profile && payload.profile._id) {
+        setProfile(payload.profile);
+      }
+
+      if (typeof payload.isActive === 'boolean') {
+        setProfile((currentProfile) => ({
+          ...(currentProfile || {}),
+          isActive: payload.isActive
+        }));
+      }
+    };
+
+    socket.on('restaurant:statusChanged', handleRestaurantStatusChange);
+
+    return () => {
+      if (socket.connected) {
+        socket.emit('leaveUser', profile._id);
+      }
+      socket.disconnect();
+    };
+  }, [profile?._id, profile?.role]);
 
   if (checkingAuth) {
     return <div className="loading">Checking access...</div>;
   }
 
-  if (!profileRole) {
+  if (!profile) {
     return <Navigate to="/" replace />;
   }
 
-  if (profileRole !== allowedRole) {
-    return <Navigate to={getDashboardRouteByRole(profileRole)} replace />;
+  if (profile.role === 'restaurant' && profile.isActive === false) {
+    return <SuspendedAccessScreen />;
+  }
+
+  if (profile.role !== allowedRole) {
+    return <Navigate to={getDashboardRouteByRole(profile.role)} replace />;
   }
 
   return children;
